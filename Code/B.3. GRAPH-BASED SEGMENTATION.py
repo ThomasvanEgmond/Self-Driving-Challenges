@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 
 # load data
 # image = cv2.imread(r"D:/SDC/SDC_codes/right_copy/16830097790672958.png")
-image = cv2.imread("Afbeelding3.png")
+image = cv2.imread("Afbeelding4.png")
 
 # create a simple mask image similar to the loaded image, with the shape and return type
 mask = np.zeros(image.shape[:2], np.uint8)
@@ -17,7 +17,7 @@ foregroundModel = np.zeros((1, 65), np.float64)
 # define the Region of Interest (ROI) as the coordinates of the rectangle where the values are entered
 # as (startingPoint_x, startingPoint_y, width, height) these coordinates are according to the input
 # image it may vary for different images
-rectangle = (70, 0, 643, 200)
+rectangle = (100, 100, 760, 512) # Afb3: (70, 0, 643, 200) (0, 100, 643, 263) Afb4: (100, 100, 760, 512)
 
 # apply the grabcut algorithm with appropriate values as parameters, number of iterations = 3
 # cv2.GC_INIT_WITH_RECT is used because of the rectangle mode is used

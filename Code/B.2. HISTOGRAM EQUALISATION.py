@@ -13,7 +13,7 @@ def histogram_equalization(image):
     return equalized
 
 # image = cv2.imread("D:/Internship_RDW/16830097790672958.png")
-image = cv2.imread("Afbeelding2.png")
+image = cv2.imread("Afbeelding4.png")
 print(image.shape)
 gray = to_gray(image)
 cv2.imshow('Grayscale Image', gray)
@@ -22,7 +22,7 @@ cv2.imshow('Grayscale Image', gray)
 equalized = histogram_equalization(gray)
 print(equalized.shape)
 cv2.imshow('Equalized Image', equalized)
-# cv2.imwrite('equa_hist.png', equalized)
+cv2.imwrite('equa_hist.png', equalized)
 
 # Calculate histograms
 gray_hist, gray_bins = np.histogram(gray.ravel(), bins=16, range=[0, 256])
