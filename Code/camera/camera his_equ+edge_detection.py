@@ -1,5 +1,6 @@
 import numpy as np
 import cv2 as cv
+from sklearn.cluster import KMeans
 
 def histogram_equalization(image):
     # Convert the image to grayscale
@@ -26,7 +27,17 @@ def detect_lines(frame):
     high_threshold = 400
     edges = cv.Canny(white, low_threshold, high_threshold)
     return edges
- 
+
+def clustering_segmentation(img):
+    vectorized = img.reshape((-1, 3))
+
+    # k-means part, change n_clusters for better results
+    kmeans = KMeans(n_clusters=5, random_state=0, n_init=5).fit(vectorized)
+    centers = np.uint8(kmeans.cluster_centers_)
+    segmented_data = centers[kmeans.labels_.flatten()]
+
+    return segmented_data.reshape(img.shape)
+
 def main():
     # Open the default camera
     cap = cv.VideoCapture(0)
@@ -45,6 +56,7 @@ def main():
         
         # Apply histogram equalization
         equalized_frame = histogram_equalization(frame)
+        # equalized_frame = clustering_segmentation(frame)
         
         # Detect lines on the original frame
         edges_original = detect_lines(frame)

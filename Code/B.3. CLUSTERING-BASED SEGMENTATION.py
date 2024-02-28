@@ -4,7 +4,7 @@ from sklearn.cluster import KMeans
 
 # load data
 # img = cv2.imread(r"D:/SDC/SDC_codes/right_copy/16830097790672958.png")
-img = cv2.imread("Afbeelding3.png")
+img = cv2.imread("Afbeelding4.png")
 vectorized = img.reshape((-1, 3))
 
 # k-means part, change n_clusters for better results
