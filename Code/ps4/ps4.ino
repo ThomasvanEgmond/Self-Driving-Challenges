@@ -66,14 +66,6 @@ void onEvent(){
     Serial.println("l1 button down");
   }
  
-  if(PS4.event.button_up.r2){
-    Serial.println("r2 button up");
-  }
- 
-  if(PS4.event.button_down.r2){
-    Serial.println("r2 buton down");
-  }
- 
   if(PS4.event.button_up.r1){
     Serial.println("r1 button up");
   }
@@ -145,7 +137,16 @@ void onEvent(){
   if(PS4.event.button_down.cross){
     Serial.println("cross button down");
   }
+
+  if(PS4.LStickX()<-10||PS4.LStickX()>10||PS4.LStickY()<-10||PS4.LStickY()>10){
+    printf("LStick: (%d, %d) \n", PS4.LStickX(), PS4.LStickY());
+  }
+
+  if(PS4.RStickX()<-10||PS4.RStickX()>10||PS4.RStickY()<-10||PS4.RStickY()>10){
+    printf("RStick: (%d, %d) \n", PS4.RStickX(), PS4.RStickY());
+  }
 }
+
  
 void setup()
 {
