@@ -12,24 +12,31 @@ def detect_white_spots(frame, lower_white):
 
     return white_spots
 
+def calibrateLowerWhite(calibrationCountDown, lower_white, base_value, current_value):
+    if current_value<base_value: return lower_white-2**(calibrationCountDown-1)
+    return lower_white+2**(calibrationCountDown-1)
+
 def main():
     cap = cv.VideoCapture(0)
     lower_white = 100
+    base_value = 1138575 # road3.jpg, base value 1138575, lower_white 217
+    calibrationCountDown = 0
 
     if not cap.isOpened():
         print("Cannot open camera")
         exit()
     
     while True:
-        ret, frame = cap.read()
+        frame = cv.imread("road3.jpg")
+        # ret, frame = cap.read()
         
-        if not ret:
-            print("Can't receive frame (stream end?). Exiting ...")
-            break
-        
+        # if not ret:
+        #     print("Can't receive frame (stream end?). Exiting ...")
+        #     break
+
         # Make the left half of the frame black
-        height, width = frame.shape[:2]
-        frame[:, 0:width//2] = 0  # Set all pixels on the left side to black
+        # height, width = frame.shape[:2]
+        # frame[:, 0:width//2] = 0  # Set all pixels on the left side to black
         
         white_spots = detect_white_spots(frame, lower_white)
         
@@ -39,9 +46,15 @@ def main():
         
         cv.imshow('Live White Spot Detection', white_spots)
 
+        current_value=np.sum(white_spots)
         if np.sum(white_spots) > 100000:
-            print("White line detected")
+            print(lower_white,current_value,"White line detected",calibrationCountDown, base_value-current_value)
         
+        if calibrationCountDown > 0:
+            if base_value-current_value<-100 or base_value-current_value>100:
+                lower_white=calibrateLowerWhite(calibrationCountDown, lower_white, base_value, current_value)
+            calibrationCountDown-=1
+
         key = cv.waitKey(1)
         
         if key == ord('q'):
@@ -50,6 +63,13 @@ def main():
             lower_white += 1
         if key == ord('u') and lower_white > 0:
             lower_white -= 1
+        if key == ord('w') and lower_white < 245:
+            lower_white += 10
+        if key == ord('s') and lower_white > 10:
+            lower_white -= 10
+        if key == ord('c'): # calibrate
+            calibrationCountDown = 7
+            lower_white=127
 
     cap.release()
     cv.destroyAllWindows()

@@ -4,7 +4,7 @@ from skimage import io, img_as_float
 
 # load data
 # frame = cv.imread(r"D:/SDC/SDC_codes/right_copy/16830097790672958.png")  # name picture
-frame = cv.imread("equa_hist.png")
+frame = cv.imread("Afbeelding3.png")
 
 # blurr the image and then turn into greyscale
 kernel_size = 7
@@ -23,6 +23,6 @@ high_threshold = 400
 edges = cv.Canny(white, low_threshold, high_threshold)
 
 cv.imshow("edge_det", edges)  # show new file
-cv.imwrite("edge_det.png", edges)  # creates new file
+# cv.imwrite("edge_det.png", edges)  # creates new file
 
 cv.waitKey()
