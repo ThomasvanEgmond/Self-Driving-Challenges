@@ -20,10 +20,10 @@ def calibrateLowerWhite(calibrationCountDown, lower_white, base_value, current_v
 def check_segments(blackWhiteFrame):
     height = blackWhiteFrame.shape[0]
     segment_height = height // 4
-    for i in range(4):
+    for i in reversed(range(4)):
         segment = blackWhiteFrame[i * segment_height:(i + 1) * segment_height, :]
-        white_pixels = np.sum(blackWhiteFrame) / 255
-        if white_pixels < 416:
+        white_pixels = np.sum(segment) / 255
+        if white_pixels > 416:
             return i+1
 
 
@@ -48,7 +48,7 @@ def check_for_lines(camera):
     # If after, make sure to adjust the `white_spots` image in a similar way.
     
     
-
+    cv.imshow('camera',frame)
     cv.imshow('Live White Spot Detection '+ camera.name, blackWhiteFrame)
 
     white_pixels = np.sum(blackWhiteFrame) / 255
