@@ -22,7 +22,7 @@ def check_segments(white_pixels):
     segment_height = height // 4
     for i in range(4):
         segment = white_pixels[i * segment_height:(i + 1) * segment_height, :]
-        return segment[i+1]
+        return i+1
 
 
 def check_for_lines(camera):
