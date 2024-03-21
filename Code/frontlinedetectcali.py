@@ -17,12 +17,14 @@ def calibrateLowerWhite(calibrationCountDown, lower_white, base_value, current_v
     if current_value<base_value: return lower_white-2**(calibrationCountDown-1)
     return lower_white+2**(calibrationCountDown-1)
 
-def check_segments(white_pixels):
-    height = white_pixels.shape[0]
+def check_segments(blackWhiteFrame):
+    height = blackWhiteFrame.shape[0]
     segment_height = height // 4
     for i in range(4):
-        segment = white_pixels[i * segment_height:(i + 1) * segment_height, :]
-        return i+1
+        segment = blackWhiteFrame[i * segment_height:(i + 1) * segment_height, :]
+        white_pixels = np.sum(blackWhiteFrame) / 255
+        if white_pixels < 416:
+            return i+1
 
 
 def check_for_lines(camera):
@@ -86,8 +88,8 @@ def checkKeyboardInputs(cameraList):
 
 def main():
     cameraList=[]
-    cameraList.append(cam.Camera("rechts",0,141439,"edwsc"))
-    cameraList.append(cam.Camera("links",1,140516,"ujikm"))
+    cameraList.append(cam.Camera("Voor",0,141439,"edwsc"))
+    # cameraList.append(cam.Camera("links",1,140516,"ujikm"))
 
 
     for camera in cameraList:
