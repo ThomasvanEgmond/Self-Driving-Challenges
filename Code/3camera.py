@@ -59,9 +59,9 @@ def check_for_lines(camera):
 
         line_detected = True
 
-    print("\n---------------------------------")
-    print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment = {segmentNumber}")
-    print("---------------------------------")
+        print("\n---------------------------------")
+        print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment = {segmentNumber}")
+        print("---------------------------------")
 
     if camera.calibrationCountDown > 0:
         if camera.base_value-white_pixels<-100 or camera.base_value-white_pixels>100:
@@ -89,7 +89,7 @@ def checkKeyboardInputs(cameraList):
 
 def main():
     cameraList=[]
-    cameraList.append(cam.Camera("Voor",0,141439,"rftgb"))
+    cameraList.append(cam.Camera("voor",0,141439,"rftgb"))
     cameraList.append(cam.Camera("links",1,140516,"ujikm"))
     cameraList.append(cam.Camera("rechts",2,140516,"edwsc"))
 
