@@ -54,7 +54,8 @@ def check_for_lines(camera):
     white_pixels = np.sum(blackWhiteFrame) / 255
     segmentNumber = 0
     if white_pixels > 1664:
-        segmentNumber=check_segments(blackWhiteFrame)
+        if camera.name == "voor":
+            segmentNumber=check_segments(blackWhiteFrame)
 
         line_detected = True
 
@@ -90,7 +91,7 @@ def main():
     cameraList=[]
     cameraList.append(cam.Camera("Voor",0,141439,"rftgb"))
     cameraList.append(cam.Camera("links",1,140516,"ujikm"))
-    cameraList.append(cam.Camera("rechts",1,140516,"edwsc"))
+    cameraList.append(cam.Camera("rechts",2,140516,"edwsc"))
 
 
     for camera in cameraList:
