@@ -26,7 +26,7 @@ def detect_lines(frame):
     low_threshold = 50
     high_threshold = 400
     edges = cv.Canny(white, low_threshold, high_threshold)
-    return edges
+    return white
 
 def clustering_segmentation(img):
     vectorized = img.reshape((-1, 3))
@@ -63,6 +63,7 @@ def main():
         
         # Detect lines on the equalized frame
         edges_equalized = detect_lines(equalized_frame)
+        cv.imshow('Original Frame', frame)
         
         # Display the original frame with edge detection
         cv.imshow('Edge Detection on Original Frame', edges_original)

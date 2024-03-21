@@ -1,9 +1,9 @@
 import numpy as np
 import cv2 as cv
  
-def detect_lines(frame):
+def detect_lines(frame, kernel_size):
     # Blurr the image and then turn into greyscale
-    kernel_size = 7
+    # kernel_size = 7
     blur = cv.GaussianBlur(frame, (kernel_size, kernel_size), 0)
     grey = cv.cvtColor(blur, cv.COLOR_BGR2GRAY)
  
@@ -16,7 +16,7 @@ def detect_lines(frame):
     low_threshold = 50
     high_threshold = 400
     edges = cv.Canny(white, low_threshold, high_threshold)
-    return edges
+    return white
  
 def main():
     # Open the default camera
@@ -32,10 +32,17 @@ def main():
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
             break
+        
+        # frame = frame[0:1920,0:200]
         # Detect lines
-        edges = detect_lines(frame)
+        edges = detect_lines(frame,7)
         # Display the resulting frame
-        cv.imshow('Live Edge Detection', edges)
+        cv.imshow('Live Camera', frame)
+        cv.imshow('Live Camera cropped', frame[0:640,0:720])
+        cv.imshow('Live Camera cropped2', frame[0:1280,0:360])
+        # cv.imshow('Live Edge Detection7', edges)
+        # cv.imshow('Live Edge Detection20', detect_lines(frame,21))
+        # cv.imshow('Live Edge Detection30', detect_lines(frame,31))
         # Break the loop
         if cv.waitKey(1) == ord('q'):
             break
