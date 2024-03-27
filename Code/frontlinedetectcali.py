@@ -53,7 +53,7 @@ def check_for_lines(camera):
 
     white_pixels = np.sum(blackWhiteFrame) / 255
     segmentNumber = 0
-    if white_pixels > 1664:
+    if white_pixels > 882:
         segmentNumber=check_segments(blackWhiteFrame)
 
         line_detected = True
@@ -88,7 +88,7 @@ def checkKeyboardInputs(cameraList):
 
 def main():
     cameraList=[]
-    cameraList.append(cam.Camera("Voor",0,141439,"edwsc"))
+    cameraList.append(cam.Camera("Voor",1,141439,"edwsc"))
     # cameraList.append(cam.Camera("links",1,140516,"ujikm"))
 
 
