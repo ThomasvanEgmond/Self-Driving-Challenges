@@ -43,14 +43,29 @@ def check_for_lines(camera):
     if white_pixels > 1664:
         line_detected = True
 
-    print("\n---------------------------------")
-    print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}")
-    print("---------------------------------")
+    # print("\n---------------------------------")
+    # print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}")
+    # print("---------------------------------")
 
     if camera.calibrationCountDown > 0:
         if camera.base_value-white_pixels<-100 or camera.base_value-white_pixels>100:
             camera.lower_white=calibrateLowerWhite(camera.calibrationCountDown, camera.lower_white, camera.base_value, white_pixels)
         camera.calibrationCountDown-=1
+
+def checkAngles(blackWhiteFrame):
+    white_pixels = np.sum(blackWhiteFrame) / 255
+    if white_pixels > 1664:
+        for y in blackWhiteFrame:
+            for x in blackWhiteFrame:
+                if blackWhiteFrame[x] == 255:
+                    return x
+        for y in blackWhiteFrame.reverse():
+            for x in blackWhiteFrame:
+                if blackWhiteFrame[x] == 255:
+                    return y
+    angle = (1-y)/(x-1)
+    print(angle)
+
 
 def checkKeyboardInputs(cameraList):
     key = cv.waitKey(1)
