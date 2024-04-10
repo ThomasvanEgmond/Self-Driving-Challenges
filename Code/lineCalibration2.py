@@ -95,6 +95,8 @@ def main():
             if not camera.cap.isOpened():
                 print("Cannot open camera nr."+ camera.name)
                 exit()   
+
+    checkAngles()
     
     while True:
         for camera in cameraList:

@@ -17,10 +17,19 @@ def calibrateLowerWhite(calibrationCountDown, lower_white, base_value, current_v
     if current_value<base_value: return lower_white-2**(calibrationCountDown-1)
     return lower_white+2**(calibrationCountDown-1)
 
-def check_segments(blackWhiteFrame):
+def check_segments4(blackWhiteFrame):
     height = blackWhiteFrame.shape[0]
     segment_height = height // 4
     for i in reversed(range(4)):
+        segment = blackWhiteFrame[i * segment_height:(i + 1) * segment_height, :]
+        white_pixels = np.sum(segment) / 255
+        if white_pixels > 416:
+            return i+1
+        
+def check_segments20(blackWhiteFrame):
+    height = blackWhiteFrame.shape[0]
+    segment_height = height // 20
+    for i in reversed(range(20)):
         segment = blackWhiteFrame[i * segment_height:(i + 1) * segment_height, :]
         white_pixels = np.sum(segment) / 255
         if white_pixels > 416:
@@ -52,16 +61,25 @@ def check_for_lines(camera):
     cv.imshow('Live White Spot Detection '+ camera.name, blackWhiteFrame)
 
     white_pixels = np.sum(blackWhiteFrame) / 255
-    segmentNumber = 0
+    segmentNumberVoor = segmentNumberLinks = segmentNumberRechts = 0
     if white_pixels > 1664:
         if camera.name == "voor":
-            segmentNumber=check_segments(blackWhiteFrame)
+            segmentNumberVoor=check_segments4(blackWhiteFrame)
+            print("\n---------------------------------")
+            print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment Voor = {segmentNumberVoor}")
+            print("---------------------------------")
+        if camera.name == "links":
+            segmentNumberLinks=check_segments20(blackWhiteFrame)
+            print("\n---------------------------------")
+            print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment Links = {segmentNumberLinks}")
+            print("---------------------------------")
+        if camera.name == "rechts":
+            segmentNumberRechts=check_segments20(blackWhiteFrame)
+            print("\n---------------------------------")
+            print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment rechts = {segmentNumberRechts}")
+            print("---------------------------------")
 
         line_detected = True
-
-        print("\n---------------------------------")
-        print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment = {segmentNumber}")
-        print("---------------------------------")
 
     if camera.calibrationCountDown > 0:
         if camera.base_value-white_pixels<-100 or camera.base_value-white_pixels>100:
