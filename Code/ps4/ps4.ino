@@ -154,7 +154,7 @@ void setup()
    
   PS4.attach(onEvent);
    
-  PS4.begin("d4:6d:6d:fc:54:0d");
+  PS4.begin("f0:b6:1e:79:0b:4d");
   Serial.println("Initialization finished.");
 }
  
