@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import cv2
 
 # ==== runnen als ov_model nog niet bestaat ====
-# model = YOLO("C:\\Users\\Gebruiker\\PycharmProjects\\YOLO_test\\runs\\detect\\train10\\best.pt")
+# model = YOLO("runs/detect/train10/best.pt")
 # model.export(format='openvino')
 # ==============================================
 
