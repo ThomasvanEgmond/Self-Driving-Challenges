@@ -4,11 +4,12 @@ import cv2 as cv
 class Detection:
     def __init__(self):
         self.cameraList=[]
+
+    def run(self):
         self.cameraList.append(Camera("voor",0,141439,"rftgb"))
         self.cameraList.append(Camera("links",1,140516,"ujikm"))
         self.cameraList.append(Camera("rechts",2,140516,"edwsc"))
 
-    def run(self):
         for camera in self.cameraList:
                 if not camera.cap.isOpened():
                     print("Cannot open camera nr."+ camera.name)
@@ -85,7 +86,7 @@ class Detection:
         cv.imshow('camera',frame)
         cv.imshow('Live White Spot Detection '+ camera.name, blackWhiteFrame)
 
-        white_pixels = np.sum(self, blackWhiteFrame) / 255
+        white_pixels = np.sum(blackWhiteFrame) / 255
         segmentNumberVoor = segmentNumberLinks = segmentNumberRechts = 0
         if white_pixels > 1664:
             if camera.name == "voor":
@@ -167,3 +168,5 @@ class Camera:
         self.lower_white=lower_white
         self.calibrationCountDown=0
 
+
+# Detection().run()
