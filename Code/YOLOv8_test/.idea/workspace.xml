@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="f18fa5f4-16c1-4312-a9e7-f9731cbac5de" name="Changes" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../.." />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "customColor": "",
+  "associatedIndex": 5
+}]]></component>
+  <component name="ProjectId" id="2ex802Si5NR1V7eAhzUxmby1Mpm" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "C:/Users/SDC/Desktop/GitHub/Self-Driving-Challenges/Pre-Production/Intel NUC"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-d68999036c7f-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.14475.56" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f18fa5f4-16c1-4312-a9e7-f9731cbac5de" name="Changes" comment="" />
+      <created>1712834646392</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1712834646392</updated>
+    </task>
+    <servers />
+  </component>
+</project>
