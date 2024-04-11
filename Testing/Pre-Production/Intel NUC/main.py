@@ -5,7 +5,8 @@ from multiprocessing import Process
 
 def start():
     print('Searching for connected ESP32...')
-    lineDetection.
+    lineDetectionObject = Detection()
+    lineDetectionObject.run()
     ser = None
     while ser is None:
         ports = serial.tools.list_ports.comports(include_links=False)

@@ -1,4 +1,5 @@
 from lines import Detection
 
 if __name__ == '__main__':
-    Detection.run()    
+    lineDetectionObject = Detection()
+    lineDetectionObject.run()    
