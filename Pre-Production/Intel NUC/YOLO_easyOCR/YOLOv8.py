@@ -1,45 +1,73 @@
+import os
+from ultralytics import YOLO
 import cv2
 import easyocr
-from ultralytics import YOLO
 
 # ==== runnen als ov_model nog niet bestaat ====
-# model = YOLO("runs/merged_model/best.pt")
+# model = YOLO("runs/detect/train10/best.pt")
 # model.export(format='openvino')
 # ==============================================
 
-ov_model = YOLO('runs/merged_model/best_openvino_model/')
 
-reader = easyocr.Reader(['en'], gpu=False)
+class ObjectDetection:
+    def __init__(self,):
+        os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        self.ov_model = YOLO('runs/merged_model/best_openvino_model/', task="detect")
+        self.reader = easyocr.Reader(['en'], gpu=False)
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
+    def detect(self,):
+        self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        while True:
+            ret, frame = self.cap.read()
+            if not ret:
+                break
 
-    # cv2.imshow('frame', frame)
-    results = ov_model.predict(frame, show=True, verbose=False, imgsz=800)[0]
+            # cv2.imshow('frame', frame)
+            results = self.ov_model.predict(frame, show=True, verbose=False, imgsz=800)[0]
 
-    outerMostSign = None
+            outerMostRedLight = None
+            redLights = []
 
-    for i, c in enumerate(results.boxes.cls):
-        if results.names[int(c)] == "sign":             # Filter results based on class
-            boxResult = results.boxes.xyxy[i]
-            if outerMostSign is None:
-                outerMostSign = boxResult
-            if boxResult[2] > outerMostSign[2]:         # compare x_max
-                outerMostSign = boxResult
-            if outerMostSign is not None:
-                # print(outerMostSign)
-                x_min, y_min, x_max, y_max = outerMostSign
-                roi = frame[int(y_min):int(y_max), int(x_min):int(x_max)]       # crop frame using bb cords
-                ocr_results = reader.readtext(roi)
-                for (bbox, text, prob) in ocr_results:
-                    print(text)
+            # print(type(results.names))
+            # names = ov_model.names
+            for i, c in enumerate(results.boxes.cls):
+                match results.names[int(c)]:
+                    case "Red":
+                        if results.names[int(c)] == "Red":  # Filter results based on class
+                            redLights.append(results.boxes.xyxy[i][2])
+                            boxResult = results.boxes.xyxy[i][2]
+                            if outerMostRedLight is None:
+                                outerMostRedLight = results.boxes.xyxy[i][2]
+                            if boxResult > outerMostRedLight: outerMostRedLight = boxResult
+                            print(redLights)
+                            if outerMostRedLight is not None: print(outerMostRedLight)
+                    case "Green":
+                        print("Green???")
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+                    case "sign":
+                        boxResult = results.boxes.xyxy[i]
+                        if outerMostSign is None:
+                            outerMostSign = boxResult
+                        if boxResult[2] > outerMostSign[2]:         # compare x_max
+                            outerMostSign = boxResult
+                        if outerMostSign is not None:
+                            # print(outerMostSign)
+                            x_min, y_min, x_max, y_max = outerMostSign
+                            roi = frame[int(y_min):int(y_max), int(x_min):int(x_max)]       # crop frame using bb cords
+                            ocr_results = self.reader.readtext(roi)
+                            for (bbox, text, prob) in ocr_results:
+                                print(text)
 
-cap.release()
-cv2.destroyAllWindows()
+                    case _:
+                        pass
+                # print(results.names[int(c)])
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        self.cap.release()
+        cv2.destroyAllWindows()
+
+
+ObjectDetection().detect()

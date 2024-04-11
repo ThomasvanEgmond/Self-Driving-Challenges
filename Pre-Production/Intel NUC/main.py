@@ -9,8 +9,8 @@ if __name__ == '__main__':
 
     lineDetectionProcess = Process(target=Detection().run)
     esp32Process = Process(target=ESP32().connect)
-    yolov8Process = Process(target=ObjectDetection().detect)
+    # yolov8Process = Process(target=ObjectDetection().detect)
 
     esp32Process.start()
-    yolov8Process.start()
+    # yolov8Process.start()
     lineDetectionProcess.start()
