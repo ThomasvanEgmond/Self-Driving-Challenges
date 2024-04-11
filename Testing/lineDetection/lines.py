@@ -3,15 +3,15 @@ import cv2 as cv
 
 class Detection:
     def __init__(self):
-        self.pixelsForLineHit = 1664
-        self.segmentPixelsForLineHit = 416
-
+        self.whitePixelHitThreshold = 1664
+        self.whitePixelSegmentHitThreshold = 416
         self.cameraList=[]
+
+    def run(self):
         self.cameraList.append(Camera("voor",0,141439,"rftgb"))
         self.cameraList.append(Camera("links",1,140516,"ujikm"))
         # self.cameraList.append(Camera("rechts",2,140516,"edwsc"))
 
-    def run(self):
         for camera in self.cameraList:
                 if not camera.cap.isOpened():
                     print("Cannot open camera nr."+ camera.name)
@@ -69,7 +69,7 @@ class Detection:
         for i in reversed(range(segmentCount)):
             segment = blackWhiteFrame[i * segment_height:(i + 1) * segment_height, :]
             white_pixels = np.sum(segment) / 255
-            if white_pixels > self.segmentPixelsForLineHit:
+            if white_pixels > self.whitePixelSegmentHitThreshold:
                 return i+1
 
     def check_for_lines(self, camera):
@@ -101,7 +101,7 @@ class Detection:
         cv.setWindowTitle(camera.name, f"{camera.name}: White line detected = {line_detected}")
         segmentNumberVoor = segmentNumberLinks = segmentNumberRechts = 0
         segmentNumber = 0
-        if white_pixels > self.pixelsForLineHit:
+        if white_pixels > self.whitePixelHitThreshold:
             line_detected = True
             if camera.name == "voor":
                 segmentNumber=self.check_segments(blackWhiteFrame, 4)

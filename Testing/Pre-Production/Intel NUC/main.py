@@ -1,6 +1,6 @@
 from ESP import ESP32 
-from YOLO.YOLOv8 import ObjectDetection
-from lijndetection.lines import Detection
+from YOLO_easyOCR.YOLOv8 import ObjectDetection
+from lineDetection.lines import Detection
 from multiprocessing import Process
 import os
 
