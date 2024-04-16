@@ -22,14 +22,23 @@ segmentCount = 4
 def normalToSegment(n):
     return int(n*segmentCount)
 
+def normalToCrosswalkSegment(n, x0, x1):
+    if n<x0 or n>x1: return -1 # outside crosswalk box
+    return int((n-x0)/(x1-x0)*segmentCount)
+    
 def personDetection(frame, saveFrame=False):
     results = ov_model.predict(frame, classes=[0], conf=0.5, verbose=False) # find persons in view
     # print(results)
     for result in results:
-        if saveFrame: result.save("images/pedestrian_test_frame.png")
-        # print(result.boxes.cls)
+        # if saveFrame: result.save("images/pedestrian_test_frame.png")
+
+        objects = result.boxes.cls.tolist()
+        # print(objects)
         boxes = result.boxes.xyxyn.tolist()
-        print(f"{len(boxes)} person detected")
+        personBoxes = [boxes[i] for i in range(len(objects)) if objects[i] == 0]
+        # print(personBoxes)
+        crosswalkBoxes = [boxes[i] for i in range(len(objects)) if objects[i] == "crosswalk_index"]
+        print(f"{len(personBoxes)} person detected, {len(crosswalkBoxes)} crosswalk detected")
         # print(boxes)
 
         global personCrossing
@@ -38,26 +47,31 @@ def personDetection(frame, saveFrame=False):
 
         # get person box
         personBox = []
-        if len(boxes) == 0: 
-            if personCrossingDone: 
+        if len(personBoxes) == 0: 
+            if personCrossingDone: # move to outside crosswalkBox
                 print("crossing reset")
                 personCrossingDone = False
             break
-        if len(boxes) == 1: personBox = boxes[0] 
-        if len(boxes) > 1: # find largest person box 
+        if len(personBoxes) == 1: personBox = personBoxes[0] 
+        if len(personBoxes) > 1: # find largest person box 
             largestSize = 0
             largestBoxIndex = 0
-            for i,box in enumerate(boxes):
+            for i,box in enumerate(personBoxes):
                 boxSize = (box[2]-box[0])*(box[3]-box[1])
                 print(f"\tbox {i}: size = {boxSize}")
                 if boxSize > largestSize: 
                     largestSize = boxSize
                     largestBoxIndex = i
             print(f"largest box is box {largestBoxIndex}")
-            personBox = boxes[largestBoxIndex]
+            personBox = personBoxes[largestBoxIndex]
+
+        # crosswalkBox = []
+        # get crosswalkBox from result
+        # if crosswalkBox == []: break
+        # if personBox[2] < crosswalkBox[0] or personBox[0] > crosswalkBox[2]: break
 
         # find segment 
-        segmentCenter = normalToSegment(personBox[0]+(personBox[2]-personBox[0])/2)
+        segmentCenter = normalToSegment(personBox[0]+(personBox[2]-personBox[0])/2) # replace with normalToCrosswalkSegment
         boxSize = (personBox[2]-personBox[0])*(personBox[3]-personBox[1])
         for i in personBox:
             print(f"\t{round(i,2)},", end="") # print normalised coördinates
