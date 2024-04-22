@@ -25,9 +25,21 @@ def normalToSegment(n):
 def normalToCrosswalkSegment(n, x0, x1):
     if n<x0 or n>x1: return -1 # outside crosswalk box
     return int((n-x0)/(x1-x0)*segmentCount)
+
+def reset():
+    global personCrossing
+    global personCrossingDone
+    global startSegment
+    global currentSegment
+    personCrossing = False # is true while a person is crossing
+    personCrossingDone = False # is true after a person has crossed and resets when no person detected
+    startSegment = -1 # segment where person is first detected
+    currentSegment = -1 # current segment of person during crossing
+    print("crossing reset")
     
 def personDetection(frame, saveFrame=False):
-    results = ov_model.predict(frame, classes=[0], conf=0.5, verbose=False) # find persons in view
+    results = ov_model.predict(frame, classes=[0], conf=0.5, verbose=False, show=True) # find persons in view
+    # results = ov_model.predict(frame, classes=[0], conf=0.5, verbose=False) # find persons in view
     # print(results)
     for result in results:
         # if saveFrame: result.save("images/pedestrian_test_frame.png")
@@ -37,20 +49,20 @@ def personDetection(frame, saveFrame=False):
         boxes = result.boxes.xyxyn.tolist()
         personBoxes = [boxes[i] for i in range(len(objects)) if objects[i] == 0]
         # print(personBoxes)
-        crosswalkBoxes = [boxes[i] for i in range(len(objects)) if objects[i] == "crosswalk_index"]
-        print(f"{len(personBoxes)} person detected, {len(crosswalkBoxes)} crosswalk detected")
+        # crosswalkBoxes = [boxes[i] for i in range(len(objects)) if objects[i] == "crosswalk_index"]
+        # print(f"{len(personBoxes)} person detected, {len(crosswalkBoxes)} crosswalk detected")
         # print(boxes)
 
         global personCrossing
         global personCrossingDone
         global startSegment
+        global currentSegment
 
         # get person box
         personBox = []
         if len(personBoxes) == 0: 
             if personCrossingDone: # move to outside crosswalkBox
-                print("crossing reset")
-                personCrossingDone = False
+                reset()
             break
         if len(personBoxes) == 1: personBox = personBoxes[0] 
         if len(personBoxes) > 1: # find largest person box 
@@ -73,11 +85,11 @@ def personDetection(frame, saveFrame=False):
         # find segment 
         segmentCenter = normalToSegment(personBox[0]+(personBox[2]-personBox[0])/2) # replace with normalToCrosswalkSegment
         boxSize = (personBox[2]-personBox[0])*(personBox[3]-personBox[1])
-        for i in personBox:
-            print(f"\t{round(i,2)},", end="") # print normalised coördinates
-        print(f"\tsize: {round(boxSize,2)},\tsegment min-max: {normalToSegment(personBox[0])}-{normalToSegment(personBox[2])}, segment center: {segmentCenter} ")
+        # for i in personBox:
+        #     print(f"\t{round(i,2)},", end="") # print normalised coördinates
+        # print(f"\tsize: {round(boxSize,2)},\tsegment min-max: {normalToSegment(personBox[0])}-{normalToSegment(personBox[2])}, segment center: {segmentCenter} ")
         currentSegment = segmentCenter
-        # print(f"\tcurrentSegment = {currentSegment}")
+        # print(f"\tperson in segment {currentSegment}")
 
         # start crossing
         if not personCrossing and not personCrossingDone:
@@ -103,7 +115,9 @@ while True:
         print("failed to grab frame")
         break
     
-    cv2.imshow("test", frame)
+    # cv2.imshow("test", frame)
+    # cv2.setWindowTitle("test",f"startsegment: {startSegment}, currentsegment: {currentSegment}, personcrossing: {personCrossing}, personcrossingdone: {personCrossingDone}")
+    cv2.setWindowTitle("image0.jpg",f"startsegment: {startSegment}, currentsegment: {currentSegment}, personcrossing: {personCrossing}, personcrossingdone: {personCrossingDone}")
 
     if framecount%50==0:
         personDetection(frame)
@@ -112,5 +126,7 @@ while True:
     if k%256 == 27: # ESC pressed
         print("Escape hit, closing...")
         break
+    if k == ord('r'):
+        reset()
         
 camera.release()
