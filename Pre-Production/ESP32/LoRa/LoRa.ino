@@ -3,11 +3,13 @@
 #include "ds3231.h"
 #include <SD.h>
 #include <PS4Controller.h>
+#include <ArduinoJson.h>
+#include <Arduino.h>
 
 
 OLED_CLASS_OBJ display(OLED_ADDRESS, OLED_SDA, OLED_SCL);
 
-#define LORA_SENDER 0 // 0 receiving, 1 sending
+#define LORA_SENDER 1 // 0 receiving, 1 sending
 #define LORA_PERIOD 433
 #define LORA_V1_6_OLED  1
 
@@ -25,12 +27,16 @@ int brakePWM = 0;
 float steeringDegrees = 0.0;
 String state = "";
 boolean newData = false;
+JsonDocument controllerDataJson;
+String controllerDataString;
 
 void setup()
 {
     Serial.begin(115200);
-    PS4.attach(onEvent);
-    PS4.begin("f0:b6:1e:79:0b:4d");
+    if (LORA_SENDER){
+      PS4.attach(onEvent);
+      PS4.begin("f0:b6:1e:79:0b:4d");
+    }
     while (!Serial);
 
     if (OLED_RST > 0) {
@@ -75,6 +81,7 @@ void setup()
 }
 
 void loop(){
+  // delay(1);
   recvWithStartEndMarkers();
   if (newData == true) {
         strcpy(tempChars, receivedChars);
@@ -87,23 +94,29 @@ void loop(){
   #if LORA_SENDER
       // Gebruik deze zend code voor de knop en controller input, data = "tekst, 1, 1.00"
       // char data[64]
-      // LoRa.beginPacket();
-      // LoRa.print(data);
-      // LoRa.endPacket();
+      controllerDataJson.shrinkToFit();
+      serializeJson(controllerDataJson, controllerDataString);
+      Serial.println(controllerDataString.length());
+      LoRa.beginPacket();
+      LoRa.print(controllerDataString);
+      // LoRa.print("<" + "");
+      LoRa.endPacket();
+      
   #else
-      // if (LoRa.parsePacket()) {
-      //     String recv = "";
-      //     int i = 0;
-      //     while (LoRa.available()) {
-      //       char temp = (char)LoRa.read();
-      //       recv += temp;
-      //       receivedChars[i++] = temp;
-      //     }
-      //     receivedChars[i] = '\0';
-      //     strcpy(tempChars, receivedChars);
-      //     parseData();
-      //     showParsedData();
-      // }
+      if (LoRa.parsePacket()) {
+          String recv = "";
+          int i = 0;
+          while (LoRa.available()) {
+            char temp = (char)LoRa.read();
+            recv += temp;
+            receivedChars[i++] = temp;
+          }
+          receivedChars[i] = '\0';
+          strcpy(tempChars, receivedChars);
+          Serial.println(tempChars);
+          // parseData();
+          // showParsedData();
+      }
   #endif
 }
 
@@ -175,148 +188,39 @@ void showParsedData() {
 }
 
 void onEvent(){
- 
-  if(PS4.event.button_up.right){
-    Serial.println("right arrow up");
-  }
- 
-  if(PS4.event.button_down.right){
-    Serial.println("right arrow down");
-  }
- 
-  if(PS4.event.button_up.left){
-    Serial.println("left arrow up");
-  }
- 
-  if(PS4.event.button_down.left){
-    Serial.println("left arrow down");
-  }
- 
-  if(PS4.event.button_up.down){
-    Serial.println("down arrow up");
-  }
- 
-  if(PS4.event.button_down.down){
-    Serial.println("down arrow down");
-  }
- 
-  if(PS4.event.button_up.up){
-    Serial.println("up arrow up");
-  }
- 
-  if(PS4.event.button_down.up){
-    Serial.println("up arrow down");
-  }
- 
-  if(PS4.event.button_up.r3){
-    Serial.println("r3 stick up");
-  }
- 
-  if(PS4.event.button_down.r3){
-    Serial.println("r3 stick down");
-  }
- 
-  if(PS4.event.button_up.l3){
-    Serial.println("l3 stick up");
-  }
- 
-  if(PS4.event.button_down.l3){
-    Serial.println("l3 stick down");
-  }
- 
-  if(PS4.R2Value()){
-    printf("R2: %d \n", PS4.R2Value());
-  }
- 
-  if(PS4.L2Value()){
-    printf("L2: %d \n", PS4.L2Value());
-  }
- 
-  if(PS4.event.button_up.l1){
-    Serial.println("l1 button up");
-  }
- 
-  if(PS4.event.button_down.l1){
-    Serial.println("l1 button down");
-  }
- 
-  if(PS4.event.button_up.r1){
-    Serial.println("r1 button up");
-  }
- 
-  if(PS4.event.button_down.r1){
-    Serial.println("r1 button down");
-  }
- 
-  if(PS4.event.button_up.touchpad){
-    Serial.println("touchpad button up");
-  }
- 
-  if(PS4.event.button_down.touchpad){
-    Serial.println("touchpad button down");
-  }
- 
-  if(PS4.event.button_up.options){
-    Serial.println("options button up");
-  }
- 
-  if(PS4.event.button_down.options){
-    Serial.println("options button down");
-  }
- 
-  if(PS4.event.button_up.share){
-    Serial.println("share button up");
-  }
- 
-  if(PS4.event.button_down.share){
-    Serial.println("share button down");
-  }
- 
-  if(PS4.event.button_up.ps){
-    Serial.println("ps button up");
-  }
- 
-  if(PS4.event.button_down.ps){
-    Serial.println("ps button down");
-  }
- 
-  if(PS4.event.button_up.triangle){
-    Serial.println("triangle button up");
-  }
- 
-  if(PS4.event.button_down.triangle){
-    Serial.println("triangle button down");
-  }
- 
-  if(PS4.event.button_up.circle){
-    Serial.println("circle button up");
-  }
- 
-  if(PS4.event.button_down.circle){
-    Serial.println("circle button down");
-  }
- 
-  if(PS4.event.button_up.square){
-    Serial.println("square button up");
-  }
- 
-  if(PS4.event.button_down.square){
-    Serial.println("square button down");
-  }
- 
-  if(PS4.event.button_up.cross){
-    Serial.println("cross button up");
-  }
- 
-  if(PS4.event.button_down.cross){
-    Serial.println("cross button down");
-  }
 
-  if(PS4.LStickX()<-10||PS4.LStickX()>10||PS4.LStickY()<-10||PS4.LStickY()>10){
-    printf("LStick: (%d, %d) \n", PS4.LStickX(), PS4.LStickY());
-  }
+  // controllerDataJson["Right"] = PS4.Right();
+  // controllerDataJson["Down"] = PS4.Down();
+  // controllerDataJson["Up"] = PS4.Up();
+  // controllerDataJson["Left"] = PS4.Left();
+  // controllerDataJson["Square"] = PS4.Square();
+  // controllerDataJson["Cross"] = PS4.Cross();
+  // controllerDataJson["Circle"] = PS4.Circle();
+  // controllerDataJson["Triangle"] = PS4.Triangle();
+  // controllerDataJson["L1"] = PS4.L1();
+  // controllerDataJson["R1"] = PS4.R1();
+  // controllerDataJson["L2"] = PS4.L2();
+  // controllerDataJson["R2"] = PS4.R2();
+  // controllerDataJson["Share"] = PS4.Share();
+  // controllerDataJson["Options"] = PS4.Options();
+  // controllerDataJson["L3"] = PS4.L3();
+  // controllerDataJson["R3"] = PS4.R3();
+  // controllerDataJson["PSButton"] = PS4.PSButton();
+  // controllerDataJson["Touchpad"] = PS4.Touchpad();
+  controllerDataJson["L2"] = PS4.L2Value();
+  controllerDataJson["R2"] = PS4.R2Value();
+  controllerDataJson["LX"] = PS4.LStickX();
+  controllerDataJson["LY"] = PS4.LStickY();
+  controllerDataJson["RX"] = PS4.RStickY();
+  controllerDataJson["RY"] = PS4.RStickY();
+  // Serial.println(float(controllerDataJson["R2Value"]));
+  // Serial.println("AA");
+  
+  // if(PS4.LStickX()<-10||PS4.LStickX()>10||PS4.LStickY()<-10||PS4.LStickY()>10){
+  //   printf("LStick: (%d, %d) \n", PS4.LStickX(), PS4.LStickY());
+  // }
 
-  if(PS4.RStickX()<-10||PS4.RStickX()>10||PS4.RStickY()<-10||PS4.RStickY()>10){
-    printf("RStick: (%d, %d) \n", PS4.RStickX(), PS4.RStickY());
-  }
+  // if(PS4.RStickX()<-10||PS4.RStickX()>10||PS4.RStickY()<-10||PS4.RStickY()>10){
+  //   printf("RStick: (%d, %d) \n", PS4.RStickX(), PS4.RStickY());
+  // }
 }
