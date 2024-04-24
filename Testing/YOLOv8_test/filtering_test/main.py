@@ -10,7 +10,7 @@ objectsCounter = [] 		# counts frames of objects before adding to filteredObject
 
 n = 10 # amount of frames before object counts as detected
 
-def filterObjects(objectsCurrentFrame):
+def frameFilter(objectsCurrentFrame): # takes list object classes as input
     global filteredObjects
     global objectsCounter
 
@@ -57,7 +57,7 @@ while True:
     # if framecount%10==0:
     for result in results:
         objects = result.boxes.cls.tolist()
-        filterObjects(objects)
+        frameFilter(objects)
 
         boxes = result.boxes.xyxyn.tolist()
         filteredBoxes = [boxes[i] for i in range(len(objects)) if objects[i] in filteredObjects]
