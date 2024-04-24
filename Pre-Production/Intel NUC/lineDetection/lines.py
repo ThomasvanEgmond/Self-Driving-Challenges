@@ -6,10 +6,12 @@ class Detection:
         self.whitePixelHitThreshold = 1664
         self.whitePixelSegmentHitThreshold = 416
         self.cameraList=[]
+        self.childPipe = None
 
-    def run(self):
-        self.cameraList.append(Camera("voor",0,141439,"rftgb"))
-        # self.cameraList.append(Camera("links",1,140516,"ujikm"))
+    def run(self, childPipe):
+        self.childPipe = childPipe
+        # self.cameraList.append(Camera("voor",0,141439,"rftgb"))
+        self.cameraList.append(Camera("links",1,140516,"ujikm"))
         # self.cameraList.append(Camera("rechts",2,140516,"edwsc"))
 
         for camera in self.cameraList:
@@ -109,10 +111,17 @@ class Detection:
                 segmentNumber=self.check_segments(blackWhiteFrame, 20)
             # cv.setWindowTitle(camera.name, f"{camera.name}: Lower_white = {camera.lower_white}, White line detected = {line_detected}, In segment {camera.name} = {segmentNumber}")
             cv.setWindowTitle(camera.name, f"{camera.name}: White line detected = {line_detected}, In segment {camera.name} = {segmentNumber}")
-            print("\n---------------------------------")
-            print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment {camera.name} = {segmentNumber}")
-            print("---------------------------------")
+            # print("\n---------------------------------")
+            # print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment {camera.name} = {segmentNumber}")
+            # print("---------------------------------")
 
+            data ={
+                "camara": camera.name,
+                "lineDetected": line_detected,
+                "segment": segmentNumber
+            }
+
+            self.childPipe.send(data)
             # if camera.name == "voor":
             #     segmentNumberVoor=self.check_segments4(blackWhiteFrame)
             #     print("\n---------------------------------")
@@ -189,3 +198,5 @@ class Camera:
         self.keyboardInputs=keyboardInputs # string of 5 chars for controls
         self.lower_white=lower_white
         self.calibrationCountDown=0
+
+# Detection().run("kaas")

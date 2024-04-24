@@ -7,7 +7,7 @@
 
 OLED_CLASS_OBJ display(OLED_ADDRESS, OLED_SDA, OLED_SCL);
 
-#define LORA_SENDER 1 // 0 receiving, 1 sending
+#define LORA_SENDER 0 // 0 receiving, 1 sending
 #define LORA_PERIOD 433
 #define LORA_V1_6_OLED  1
 
@@ -18,10 +18,12 @@ char receivedChars[numChars];
 char tempChars[numChars];        // temporary array for use when parsing
 
       // variables to hold the parsed data
-char messageFromPcChar[numChars] = {0};
-String messageFromPC = "";
-int integerFromPC = 0;
-float floatFromPC = 0.0;
+float timeMS = 0;
+char stateChars[numChars] = {0};
+int motorPWM = 0;
+int brakePWM = 0;
+float steeringDegrees = 0.0;
+String state = "";
 boolean newData = false;
 
 void setup()
@@ -89,19 +91,19 @@ void loop(){
       // LoRa.print(data);
       // LoRa.endPacket();
   #else
-      if (LoRa.parsePacket()) {
-          String recv = "";
-          int i = 0;
-          while (LoRa.available()) {
-            char temp = (char)LoRa.read();
-            recv += temp;
-            receivedChars[i++] = temp;
-          }
-          receivedChars[i] = '\0';
-          strcpy(tempChars, receivedChars);
-          parseData();
-          showParsedData();
-      }
+      // if (LoRa.parsePacket()) {
+      //     String recv = "";
+      //     int i = 0;
+      //     while (LoRa.available()) {
+      //       char temp = (char)LoRa.read();
+      //       recv += temp;
+      //       receivedChars[i++] = temp;
+      //     }
+      //     receivedChars[i] = '\0';
+      //     strcpy(tempChars, receivedChars);
+      //     parseData();
+      //     showParsedData();
+      // }
   #endif
 }
 
@@ -138,24 +140,23 @@ void recvWithStartEndMarkers() {
 }
 
 void parseData() {      // split the data into its parts
-
     char * strtokIndx; // this is used by strtok() as an index
 
   // In order of sending,
-
-  // String
     strtokIndx = strtok(tempChars,",");      // get the first part - the string
-    strcpy(messageFromPcChar, strtokIndx); // copy it to messageFromPC
-    messageFromPC = messageFromPcChar;
-    messageFromPC.trim();
-
+  // Int
+    motorPWM = atoi(strtokIndx);     // convert this part to an integer
   // Int
     strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
-    integerFromPC = atoi(strtokIndx);     // convert this part to an integer
-
+    brakePWM = atoi(strtokIndx);     // convert this part to an integer
   // Float
     strtokIndx = strtok(NULL, ",");
-    floatFromPC = atof(strtokIndx);     // convert this part to a float
+    steeringDegrees = atof(strtokIndx);     // convert this part to a float
+  // String
+    strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
+    strcpy(stateChars, strtokIndx); // copy it to messageFromPC
+    state = stateChars;
+    state.trim();
 
   #if LORA_SENDER
       LoRa.beginPacket();
@@ -166,9 +167,10 @@ void parseData() {      // split the data into its parts
 
 void showParsedData() {
     display.clear();
-    display.drawString(display.getWidth() / 2, display.getHeight() / 2 - 16, messageFromPC);
-    display.drawString(display.getWidth() / 2, display.getHeight() / 2, String(integerFromPC));
-    display.drawString(display.getWidth() / 2, display.getHeight() / 2 + 16, String(floatFromPC, 5));
+    display.drawString(display.getWidth() / 2, display.getHeight() / 2 - 16, String(String(motorPWM) + " " +  String(brakePWM)));
+    display.drawString(display.getWidth() / 2, display.getHeight() / 2, String(steeringDegrees, 5));
+    // display.drawString(display.getWidth() / 2, display.getHeight() / 2, String(timeMS, 3));
+    display.drawString(display.getWidth() / 2, display.getHeight() / 2 + 16, state);
     display.display();
 }
 

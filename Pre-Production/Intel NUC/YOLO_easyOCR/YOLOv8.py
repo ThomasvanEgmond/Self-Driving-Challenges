@@ -25,14 +25,26 @@ class ObjectDetection:
     def __init__(self,):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
         self.ov_model = YOLO('runs/merged_model/best_openvino_model/', task="detect")
+        self.childPipe = None
 
-    def detect(self,):
+    def detect(self, childPipe):
+        self.childPipe = childPipe
         ocrObject = charDetection()
         while True:
             results = self.ov_model(source="0", show=True, verbose=False, imgsz=800, stream=True)
             for result in results:
                 # print(result.orig_img)
 
+                #  data ={
+                #     "camara": camera.name,
+                #     "lineDetected": line_detected,
+                #     "segment": segmentNumber
+                # }
+
+                self.childPipe.send(result)
+
+
+                continue
                 outerMostRedLight = None
                 outerMostSign = None
                 redLights = []
