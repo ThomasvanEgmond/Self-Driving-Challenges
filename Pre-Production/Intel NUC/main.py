@@ -12,6 +12,11 @@ def drivingAlgorithm():
     global esp32Data
     global lineDetectionData
     global objectDetectionData
+    global defaultSpeed
+    global speedSignSpeed
+
+    defaultSpeed = 10
+    desSpeed = 5
 
     # print(lineDetectionData)
     # print(objectDetectionData)
@@ -19,25 +24,31 @@ def drivingAlgorithm():
     # esp32Data["brakePWM"] = lineDetectionData["segment"]
     # esp32ParentPipe.send(esp32Data)
 
-    outerMostRedLight = None
+    # outerMostRedLight = None
     outerMostSign = None
-    redLights = []
-
+    # redLights = []
+    tempObData = objectDetectionData
     for i, c in enumerate(objectDetectionData.boxes.cls):
         match objectDetectionData.names[int(c)]:
             case "Red":
-                if objectDetectionData.names[int(c)] == "Red":  # Filter result based on class
-                    maxXCoord = objectDetectionData.boxes.xyxy[i][2]
-                    redLights.append(maxXCoord)
-                    if outerMostRedLight is None:
-                        outerMostRedLight = maxXCoord
-                    if maxXCoord > outerMostRedLight: outerMostRedLight = maxXCoord
-                    print(redLights)
-                    if outerMostRedLight is not None: print(outerMostRedLight)
+                if getOuterMostRedLight(i, c):
+                    currentSpeed = desSpeed
+                    # if (lineDetected):
+                        # stop()
             case "Green":
-                print("Green???")
+                if getOuterMostGreenLight(i, c):
+                    if speedSignSpeed is not None:
+                        currentSpeed = speedSignSpeed
+                    else:
+                        currentSpeed = defaultSpeed
 
-            case "sign":
+            case "Person":
+                currentSpeed = desSpeed
+                # if (lineDetected):
+                #     stop()
+                
+
+            case "Sign":
                 signCoords = objectDetectionData.boxes.xyxy[i]
                 if outerMostSign is None:
                     outerMostSign = signCoords
@@ -48,10 +59,37 @@ def drivingAlgorithm():
                 pass
 
     if outerMostSign is not None:
-        global desSpeed
-        desSpeed = ocrDetect(outerMostSign, objectDetectionData)
-        print(desSpeed)
+        global speedSignSpeed
+        speedSignSpeed = ocrDetect(outerMostSign, objectDetectionData)
+        print(speedSignSpeed)
 
+def getOuterMostRedLight(i, c):
+    outerMostRedLight = None
+    redLights = []
+
+    if objectDetectionData.names[int(c)] == "Red":  # Filter result based on class
+        maxXCoord = objectDetectionData.boxes.xyxy[i][2]
+        redLights.append(maxXCoord)
+        if outerMostRedLight is None:
+            outerMostRedLight = maxXCoord
+        if maxXCoord > outerMostRedLight: outerMostRedLight = maxXCoord
+        print(redLights)
+        if outerMostRedLight is not None:
+            print(outerMostRedLight)
+
+def getOuterMostGreenLight(i, c):
+    outerMostGreenLight = None
+    greenLights = []
+
+    if objectDetectionData.names[int(c)] == "Green":  # Filter result based on class
+        maxXCoord = objectDetectionData.boxes.xyxy[i][2]
+        greenLights.append(maxXCoord)
+        if outerMostGreenLight is None:
+            outerMostGreenLight = maxXCoord
+        if maxXCoord > outerMostGreenLight: outerMostGreenLight = maxXCoord
+        print(greenLights)
+        if outerMostGreenLight is not None:
+            print(outerMostGreenLight)
 
 def ocrDetect(outerMostSign, result):
         x_min, y_min, x_max, y_max = outerMostSign
@@ -71,7 +109,6 @@ def getProcessData(parentPipe, process):
                     lineDetectionData = data
                 case "yolov8":
                     global objectDetectionData
-                    global speedSignSpeed
                     objectDetectionData = data
 
 
@@ -88,7 +125,6 @@ if __name__ == '__main__':
 
     lineDetectionData = None
     objectDetectionData = None
-    speedSignSpeed = None
     desSpeed = 0
 
     # esp32ParentPipe, esp32ChildPipe = Pipe()
