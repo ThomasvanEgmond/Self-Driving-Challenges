@@ -3,22 +3,12 @@ from ultralytics import YOLO
 import cv2
 import easyocr
 from multiprocessing import Process
+from queue import Queue
 
 # ==== runnen als ov_model nog niet bestaat ====
 # model = YOLO("runs/detect/train10/best.pt")
 # model.export(format='openvino')
 # ==============================================
-
-
-class charDetection:
-    def __init__(self,):
-        self.reader = easyocr.Reader(['en'], gpu=False)
-
-    def detect(self, outerMostSign, result):
-        x_min, y_min, x_max, y_max = outerMostSign
-        roi = result.orig_img[int(y_min):int(y_max), int(x_min):int(x_max)]  # crop frame using bb cords
-        for (bbox, text, prob) in self.reader.readtext(roi):
-            print(text)
 
 
 class ObjectDetection:
@@ -29,54 +19,56 @@ class ObjectDetection:
 
     def detect(self, childPipe):
         self.childPipe = childPipe
-        ocrObject = charDetection()
+        # ocrObject = charDetection()
         while True:
             results = self.ov_model(source="0", show=True, verbose=False, imgsz=800, stream=True)
+            # queue = Queue(maxsize = 60)
+            # for frame in qu
             for result in results:
+                self.childPipe.send(result)
                 # print(result.orig_img)
 
-                #  data ={
+                # data ={
                 #     "camara": camera.name,
                 #     "lineDetected": line_detected,
                 #     "segment": segmentNumber
                 # }
 
-                self.childPipe.send(result)
-
-
                 continue
-                outerMostRedLight = None
-                outerMostSign = None
-                redLights = []
+                # outerMostRedLight = None
+                # outerMostSign = None
+                # redLights = []
 
-                for i, c in enumerate(result.boxes.cls):
-                    match result.names[int(c)]:
-                        case "Red":
-                            if result.names[int(c)] == "Red":  # Filter result based on class
-                                maxXCoord = result.boxes.xyxy[i][2]
-                                redLights.append(maxXCoord)
-                                if outerMostRedLight is None:
-                                    outerMostRedLight = maxXCoord
-                                if maxXCoord > outerMostRedLight: outerMostRedLight = maxXCoord
-                                print(redLights)
-                                if outerMostRedLight is not None: print(outerMostRedLight)
-                        case "Green":
-                            print("Green???")
+                # for index, classID in enumerate(result.boxes.cls):
+                #     match result.names[int(classID)]:
+                #         case "Red":
+                #             # if result.names[int(classID)] == "Red":  # Filter result based on class
+                #             maxXCoord = result.boxes.xyxy[index][2]
+                #             redLights.append(maxXCoord)
+                #             if outerMostRedLight is None:
+                #                 outerMostRedLight = maxXCoord
+                #             if maxXCoord > outerMostRedLight: outerMostRedLight = maxXCoord
+                #             print(redLights)
+                #             if outerMostRedLight is not None: print(outerMostRedLight)
+                #         case "Green":
+                #             print("Green???")
 
-                        case "sign":
-                            signCoords = result.boxes.xyxy[i]
-                            if outerMostSign is None:
-                                outerMostSign = signCoords
-                            if signCoords[2] > outerMostSign[2]:         # compare x_max
-                                outerMostSign = signCoords
+                #         case "sign":
+                #             signCoords = result.boxes.xyxy[index]
+                #             if outerMostSign is None:
+                #                 outerMostSign = signCoords
+                #             if signCoords[2] > outerMostSign[2]:         # compare x_max
+                #                 outerMostSign = signCoords
 
-                        case _:
-                            pass
+                #         case _:
+                #             pass
 
-                if outerMostSign is not None:
-                    print(outerMostSign)
-                    ocrObject.detect(outerMostSign, result)
+                # if outerMostSign is not None:
+                #     self.childPipe.send((result, ocrObject.detect(outerMostSign, result)))
+                    
+                # else: self.childPipe.send((result, None))
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+                # if cv2.waitKey(0) & 0xFF == ord('q'):
+                #     break
+                # print("end loop")
 
