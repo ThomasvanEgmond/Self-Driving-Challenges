@@ -73,7 +73,7 @@ class ObjectDetection:
                             pass
                     # print(results.names[int(c)])
 
-                resultHistorySize = 20
+                resultHistorySize = 30
                 setHistorySize = 20
                 if len(resultHistory) == resultHistorySize:
                     resultHistory.pop(resultHistorySize-1)
@@ -84,14 +84,16 @@ class ObjectDetection:
                 # print(set(result.names.values()))
                 if len(resultHistory) == resultHistorySize:
                     resultFiltered = self.lowPassFilter(result.names.values(), resultHistory, 0.25)
-                    # print(resultFiltered)
-                    if len(setHistory) == setHistorySize:
-                        setHistory.pop(setHistorySize-1)
-                    setHistory.insert(0, resultFiltered)
+                    print(resultFiltered)
+                    # if len(setHistory) == setHistorySize:
+                    #     setHistory.pop(setHistorySize-1)
+                    # setHistory.insert(0, resultFiltered)
                     
                     # print(len(filteredObjects))
-                    setFiltered = self.lowPassFilter(result.names.values(), setHistory, 0.25)
-                    print(setFiltered)
+                    # setFiltered = self.lowPassFilter(result.names.values(), setHistory, 0.25)
+                    # print(setFiltered)
+
+
 
                 # filteredObjects = set()
                 # for className in result.names.values():
