@@ -25,7 +25,7 @@ def drivingAlgorithm():
     # esp32ParentPipe.send(esp32Data)
 
     # outerMostRedLight = None
-    outerMostSign = None
+    # outerMostSign = None
     # redLights = []
     tempObData = objectDetectionData
     for i, c in enumerate(objectDetectionData.boxes.cls):
@@ -42,26 +42,12 @@ def drivingAlgorithm():
                     else:
                         currentSpeed = defaultSpeed
 
-            case "Person":
-                currentSpeed = desSpeed
-                # if (lineDetected):
-                #     stop()
-                
-
             case "Sign":
-                signCoords = objectDetectionData.boxes.xyxy[i]
-                if outerMostSign is None:
-                    outerMostSign = signCoords
-                if signCoords[2] > outerMostSign[2]:         # compare x_max
-                    outerMostSign = signCoords
+                if getOuterMostSign(i, c):
+                    currentSpeed = speedSignSpeed
             
             case _:
                 pass
-
-    if outerMostSign is not None:
-        global speedSignSpeed
-        speedSignSpeed = ocrDetect(outerMostSign, objectDetectionData)
-        print(speedSignSpeed)
 
 def getOuterMostRedLight(i, c):
     outerMostRedLight = None
@@ -90,6 +76,20 @@ def getOuterMostGreenLight(i, c):
         print(greenLights)
         if outerMostGreenLight is not None:
             print(outerMostGreenLight)
+
+def getOuterMostSign(i, c):
+    outerMostSign = None
+
+    if objectDetectionData.names[int(c)] == "Green":
+        signCoords = objectDetectionData.boxes.xyxy[i]
+        if outerMostSign is None:
+            outerMostSign = signCoords
+        if signCoords[2] > outerMostSign[2]:  # compare x_max
+            outerMostSign = signCoords
+        if outerMostSign is not None:
+            speedSignSpeed = ocrDetect(outerMostSign, objectDetectionData)
+            print(speedSignSpeed)
+            return speedSignSpeed
 
 def ocrDetect(outerMostSign, result):
         x_min, y_min, x_max, y_max = outerMostSign
