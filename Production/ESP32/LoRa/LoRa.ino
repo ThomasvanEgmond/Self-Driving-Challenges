@@ -1,4 +1,5 @@
 #include <SPI.h>
+#include <Arduino.h>
 #include <LoRa.h>
 #include "ds3231.h"
 #include <SD.h>
@@ -7,7 +8,7 @@
 
 OLED_CLASS_OBJ display(OLED_ADDRESS, OLED_SDA, OLED_SCL);
 
-#define LORA_SENDER 1 // 0 receiving, 1 sending
+#define LORA_SENDER 0 // 0 receiving, 1 sending
 #define LORA_PERIOD 433
 #define LORA_V1_6_OLED  1
 
@@ -16,19 +17,23 @@ void onEvent();
 const byte numChars = 64;
 char receivedChars[numChars];
 char tempChars[numChars];        // temporary array for use when parsing
-
-      // variables to hold the parsed data
-char messageFromPcChar[numChars] = {0};
-String messageFromPC = "";
-int integerFromPC = 0;
-float floatFromPC = 0.0;
+char receivedCharsPC[numChars];
+char tempCharsPC[numChars];
 boolean newData = false;
 
-void setup()
-{
+// variables to hold the parsed data
+
+// char messageFromPcChar[numChars] = {0};
+// String messageFromPC = "";
+int integerFromLoRa;
+int steeringAngle;
+int motorPWM;
+int brakePWM;
+
+void setup(){
     Serial.begin(115200);
-    PS4.attach(onEvent);
-    PS4.begin("f0:b6:1e:79:0b:4d");
+    // PS4.attach(onEvent);
+    // PS4.begin("f0:b6:1e:79:0b:4d");
     while (!Serial);
 
     if (OLED_RST > 0) {
@@ -73,21 +78,27 @@ void setup()
 }
 
 void loop(){
-  recvWithStartEndMarkers();
-  if (newData == true) {
-        strcpy(tempChars, receivedChars);
+  recvWithStartEndMarkers(); //receive data from PC on serial
+
+  if (newData == true) { //checks for data from the PC on serial.
+        strcpy(tempCharsPC, receivedCharsPC);
             // this temporary copy is necessary to protect the original data
             //   because strtok() used in parseData() replaces the commas with \0
-        parseData();
+        parseData(true);
         showParsedData();
+        String data = "<112>";
+        Serial.print(data);
         newData = false;
     }
   #if LORA_SENDER
-      // Gebruik deze zend code voor de knop en controller input, data = "tekst, 1, 1.00"
+      // Gebruik deze zend code voor de knop en controller input, data = "tekst, 1, 1.00";
       // char data[64]
-      // LoRa.beginPacket();
-      // LoRa.print(data);
-      // LoRa.endPacket();
+      if (digitalRead(17)){
+        int data = 112;
+        LoRa.beginPacket();
+        LoRa.print(data);
+        LoRa.endPacket();
+      }
   #else
       if (LoRa.parsePacket()) {
           String recv = "";
@@ -97,10 +108,12 @@ void loop(){
             recv += temp;
             receivedChars[i++] = temp;
           }
-          receivedChars[i] = '\0';
-          strcpy(tempChars, receivedChars);
-          parseData();
-          showParsedData();
+          // receivedChars[i] = '\0';
+          Serial.println(receivedChars);
+          Serial.println(atoi(receivedChars));
+          // strcpy(tempChars, receivedChars);
+          // parseData(false);
+          // showParsedData();
       }
   #endif
 }
@@ -117,14 +130,14 @@ void recvWithStartEndMarkers() {
 
         if (recvInProgress == true) {
             if (rc != endMarker) {
-                receivedChars[ndx] = rc;
+                receivedCharsPC[ndx] = rc;
                 ndx++;
                 if (ndx >= numChars) {
                     ndx = numChars - 1;
                 }
             }
             else {
-                receivedChars[ndx] = '\0'; // terminate the string
+                receivedCharsPC[ndx] = '\0'; // terminate the string
                 recvInProgress = false;
                 ndx = 0;
                 newData = true;
@@ -137,38 +150,50 @@ void recvWithStartEndMarkers() {
     }
 }
 
-void parseData() {      // split the data into its parts
-
-    char * strtokIndx; // this is used by strtok() as an index
-
+void parseData(bool fromPC) {      // split the data into its parts
+  char * strtokIndx; // this is used by strtok() as an index
+  
+    // remove strtok from first variable
   // In order of sending,
+  if (fromPC){
+    strtokIndx = strtok(tempCharsPC,",");      // get the first part - the string
+    // Int
+    motorPWM = atoi(strtokIndx);     // convert this part to an integer
 
-  // String
-    strtokIndx = strtok(tempChars,",");      // get the first part - the string
-    strcpy(messageFromPcChar, strtokIndx); // copy it to messageFromPC
-    messageFromPC = messageFromPcChar;
-    messageFromPC.trim();
-
-  // Int
+    // Int
     strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
-    integerFromPC = atoi(strtokIndx);     // convert this part to an integer
+    brakePWM = atoi(strtokIndx);     // convert this part to an integer
 
-  // Float
-    strtokIndx = strtok(NULL, ",");
-    floatFromPC = atof(strtokIndx);     // convert this part to a float
+    // Int
+    strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
+    steeringAngle = atoi(strtokIndx);     // convert this part to an integer
+  }
+  else{
+    strtokIndx = strtok(tempChars,",");      // get the first part - the string
+    // Int
+    integerFromLoRa = atoi(strtokIndx);     // convert this part to an integer
+  }
 
-  #if LORA_SENDER
-      LoRa.beginPacket();
-      LoRa.print(receivedChars);
-      LoRa.endPacket();
-  #endif
+  // // Int
+  //   strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
+  //   integerFromPC = atoi(strtokIndx);     // convert this part to an integer
+
+  // // Float
+  //   strtokIndx = strtok(NULL, ",");
+  //   floatFromPC = atof(strtokIndx);     // convert this part to a float
+  
+  // // String
+  //   strcpy(messageFromPcChar, strtokIndx); // copy it to messageFromPC
+  //   messageFromPC = messageFromPcChar;
+  //   messageFromPC.trim();
+
 }
 
 void showParsedData() {
     display.clear();
-    display.drawString(display.getWidth() / 2, display.getHeight() / 2 - 16, messageFromPC);
-    display.drawString(display.getWidth() / 2, display.getHeight() / 2, String(integerFromPC));
-    display.drawString(display.getWidth() / 2, display.getHeight() / 2 + 16, String(floatFromPC, 5));
+    display.drawString(display.getWidth() / 2, display.getHeight() / 2 - 16, String(motorPWM));
+    display.drawString(display.getWidth() / 2, display.getHeight() / 2, String(brakePWM));
+    display.drawString(display.getWidth() / 2, display.getHeight() / 2 + 16, String(steeringAngle));
     display.display();
 }
 
