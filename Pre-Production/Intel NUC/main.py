@@ -14,6 +14,9 @@ def drivingAlgorithm():
     global objectDetectionData
     global defaultSpeed
     global speedSignSpeed
+    global motorPWM
+    global newSpeed
+    global currentSpeed
 
     defaultSpeed = 10
     desSpeed = 5
@@ -27,14 +30,18 @@ def drivingAlgorithm():
     # outerMostRedLight = None
     # outerMostSign = None
     # redLights = []
+
+    
+
     tempObData = objectDetectionData
     for i, c in enumerate(objectDetectionData.boxes.cls):
         match objectDetectionData.names[int(c)]:
             case "Red":
                 if getOuterMostRedLight(i, c):
                     currentSpeed = desSpeed
-                    # if (lineDetected):
-                        # stop()
+                    if (lineDetected):
+                        stop()
+
             case "Green":
                 if getOuterMostGreenLight(i, c):
                     if speedSignSpeed is not None:
@@ -48,6 +55,13 @@ def drivingAlgorithm():
             
             case _:
                 pass
+
+def parseJSON():
+    getProcessData(lineDetectionParentPipe, lineDetectionData)
+    match lineDetectionData.camera.name:
+        case "links":
+
+
 
 def getOuterMostRedLight(i, c):
     outerMostRedLight = None
@@ -92,11 +106,15 @@ def getOuterMostSign(i, c):
             return speedSignSpeed
 
 def ocrDetect(outerMostSign, result):
-        x_min, y_min, x_max, y_max = outerMostSign
-        roi = result.orig_img[int(y_min):int(y_max), int(x_min):int(x_max)]  # crop frame using bb cords
-        for (bbox, text, prob) in easyOcrReader.readtext(roi):
-            print(text)
-            return text
+    x_min, y_min, x_max, y_max = outerMostSign
+    roi = result.orig_img[int(y_min):int(y_max), int(x_min):int(x_max)]  # crop frame using bb cords
+    for (bbox, text, prob) in easyOcrReader.readtext(roi):
+        print(text)
+        return text
+
+# def gasControl():
+#     while True:
+#         while currentSpeed <= newSpeed:
 
 def getProcessData(parentPipe, process):
     while True:
@@ -138,14 +156,14 @@ if __name__ == '__main__':
     easyOcrReader = easyocr.Reader(['en'], gpu=False)
     yolov8DataThread.start()
 
-    # lineDetectionParentPipe, lineDetectionChildPipe = Pipe()
-    # lineDetectionProcess = Process(target=Detection().run, args=(lineDetectionChildPipe,), daemon=True)
-    # lineDetectionProcess.start()
-    # lineDetectionDataThread = threading.Thread(target=getProcessData, args=(lineDetectionParentPipe, "lineDetection"), daemon=True)
-    # lineDetectionDataThread.start()
+    lineDetectionParentPipe, lineDetectionChildPipe = Pipe()
+    lineDetectionProcess = Process(target=Detection().run, args=(lineDetectionChildPipe,), daemon=True)
+    lineDetectionProcess.start()
+    lineDetectionDataThread = threading.Thread(target=getProcessData, args=(lineDetectionParentPipe, "lineDetection"), daemon=True)
+    lineDetectionDataThread.start()
     
-    # while lineDetectionData is None:
-    #     time.sleep(0.01)
+    while lineDetectionData is None:
+        time.sleep(0.01)
 
     while objectDetectionData is None:
         time.sleep(0.01)

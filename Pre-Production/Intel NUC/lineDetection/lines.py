@@ -129,7 +129,7 @@ class Detection:
             #     print("---------------------------------")
             # if camera.name == "links":
             #     segmentNumberLinks=self.check_segments20(blackWhiteFrame)
-            #     print("\n---------------------------------")
+            #     print("\n---------------------------------"
             #     print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment Links = {segmentNumberLinks}")
             #     print("---------------------------------")
             # if camera.name == "rechts":
