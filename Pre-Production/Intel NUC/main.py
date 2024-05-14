@@ -7,6 +7,12 @@ import threading
 import os
 import time
 
+defaultSpeed = 10
+desSpeed = 5
+maxSteeringAngle = 90
+
+cameraLineSegments = [-1,-1,-1] # [voor,links,rechts] -1 if no line detected
+
 def drivingAlgorithm():
     global esp32ParentPipe
     global esp32Data
@@ -18,8 +24,11 @@ def drivingAlgorithm():
     global newSpeed
     global currentSpeed
 
-    defaultSpeed = 10
-    desSpeed = 5
+    global defaultSpeed
+    global desSpeed
+    global maxSteeringAngle
+
+    global cameraLineSegments
 
     # print(lineDetectionData)
     # print(objectDetectionData)
@@ -31,15 +40,41 @@ def drivingAlgorithm():
     # outerMostSign = None
     # redLights = []
 
-    
+    getProcessData(lineDetectionParentPipe, lineDetectionData)
+    # lineDetectedInFront = False
 
+    # Update line segments
+    cameraList = ["voor","links","rechts"]
+    index = cameraList.index(lineDetectionData.camera)
+    if lineDetectionData.lineDetected != None:
+        cameraLineSegments[index] = lineDetectionData.segment
+    else: cameraLineSegments[index] = -1
+
+    # match lineDetectionData.camera:
+    #     case "voor":
+    #         if lineDetectionData.lineDetected != None:
+    #             # lineDetectedInFront = True
+    #             cameraLineSegments[0] = lineDetectionData.segment
+    #         else: cameraLineSegments[0] = -1
+    #     case "links":
+    #         if lineDetectionData.lineDetected != None:
+    #             # lineDetectedInFront = True
+    #             cameraLineSegments[1] = lineDetectionData.segment
+    #         else: cameraLineSegments[1] = -1
+    #     case "rechts":
+    #         if lineDetectionData.lineDetected != None:
+    #             # lineDetectedInFront = True
+    #             cameraLineSegments[2] = lineDetectionData.segment
+    #         else: cameraLineSegments[2] = -1
+
+    # gas/brake logic
     tempObData = objectDetectionData
     for i, c in enumerate(objectDetectionData.boxes.cls):
         match objectDetectionData.names[int(c)]:
             case "Red":
                 if getOuterMostRedLight(i, c):
                     currentSpeed = desSpeed
-                    if (lineDetected):
+                    if (cameraLineSegments[0]!=-1):
                         stop()
 
             case "Green":
@@ -55,11 +90,25 @@ def drivingAlgorithm():
             
             case _:
                 pass
+    
+    # steering logic
+    steeringAngle = 0
+    if cameraLineSegments[1]!=-1 and cameraLineSegments[2]!=-1:
+        return
+    for segment in cameraLineSegments[1:]: # left/right camera
+        if segment == -1:
+            continue
+        steeringPercentage = segment/20 
+        steeringAngle = steeringPercentage * maxSteeringAngle
 
-def parseJSON():
-    getProcessData(lineDetectionParentPipe, lineDetectionData)
-    match lineDetectionData.camera.name:
-        case "links":
+    # esp32Data["steeringDegrees"] = steeringAngle
+    # esp32ParentPipe.send(esp32Data)
+    
+
+# def parseJSON():
+#     getProcessData(lineDetectionParentPipe, lineDetectionData)
+#     match lineDetectionData.camera.name:
+#         case "links":
 
 
 
