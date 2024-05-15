@@ -1,4 +1,4 @@
-from ESP import ESP32 
+# from ESP import ESP32 
 from YOLO_easyOCR.YOLOv8 import ObjectDetection
 from lineDetection.lines import Detection
 from multiprocessing import Process, Pipe
@@ -40,32 +40,16 @@ def drivingAlgorithm():
     # outerMostSign = None
     # redLights = []
 
-    getProcessData(lineDetectionParentPipe, lineDetectionData)
+    # getProcessData(lineDetectionParentPipe, lineDetectionData)
     # lineDetectedInFront = False
 
     # Update line segments
     cameraList = ["voor","links","rechts"]
-    index = cameraList.index(lineDetectionData.camera)
-    if lineDetectionData.lineDetected != None:
-        cameraLineSegments[index] = lineDetectionData.segment
+    index = cameraList.index(lineDetectionData["camera"])
+    if lineDetectionData["lineDetected"]:
+        cameraLineSegments[index] = lineDetectionData["segment"]
     else: cameraLineSegments[index] = -1
-
-    # match lineDetectionData.camera:
-    #     case "voor":
-    #         if lineDetectionData.lineDetected != None:
-    #             # lineDetectedInFront = True
-    #             cameraLineSegments[0] = lineDetectionData.segment
-    #         else: cameraLineSegments[0] = -1
-    #     case "links":
-    #         if lineDetectionData.lineDetected != None:
-    #             # lineDetectedInFront = True
-    #             cameraLineSegments[1] = lineDetectionData.segment
-    #         else: cameraLineSegments[1] = -1
-    #     case "rechts":
-    #         if lineDetectionData.lineDetected != None:
-    #             # lineDetectedInFront = True
-    #             cameraLineSegments[2] = lineDetectionData.segment
-    #         else: cameraLineSegments[2] = -1
+    # print(cameraLineSegments)
 
     # gas/brake logic
     tempObData = objectDetectionData
@@ -75,7 +59,8 @@ def drivingAlgorithm():
                 if getOuterMostRedLight(i, c):
                     currentSpeed = desSpeed
                     if (cameraLineSegments[0]!=-1):
-                        stop()
+                        # stop()
+                        pass
 
             case "Green":
                 if getOuterMostGreenLight(i, c):
@@ -93,13 +78,15 @@ def drivingAlgorithm():
     
     # steering logic
     steeringAngle = 0
-    if cameraLineSegments[1]!=-1 and cameraLineSegments[2]!=-1:
-        return
-    for segment in cameraLineSegments[1:]: # left/right camera
-        if segment == -1:
-            continue
-        steeringPercentage = segment/20 
-        steeringAngle = steeringPercentage * maxSteeringAngle
+    if not (cameraLineSegments[1]!=-1 and cameraLineSegments[2]!=-1):
+        for i,segment in enumerate(cameraLineSegments[1:]): # left/right camera
+            if segment == -1:
+                continue 
+            print(i)
+            steeringPercentage = segment/20 
+            steeringAngle = steeringPercentage * maxSteeringAngle
+        if i == 0: steeringAngle = -steeringAngle # if line on left side: negatieve angle
+    print(steeringAngle)
 
     # esp32Data["steeringDegrees"] = steeringAngle
     # esp32ParentPipe.send(esp32Data)
@@ -140,6 +127,20 @@ def getOuterMostGreenLight(i, c):
         if outerMostGreenLight is not None:
             print(outerMostGreenLight)
 
+def getOuterMostColorLight(i, c, color):
+    outerMostLight = None
+    lights = []
+
+    if objectDetectionData.names[int(c)] == color:  # Filter result based on class
+        maxXCoord = objectDetectionData.boxes.xyxy[i][2]
+        lights.append(maxXCoord)
+        if outerMostLight is None:
+            outerMostLight = maxXCoord
+        if maxXCoord > outerMostLight: outerMostLight = maxXCoord
+        print(lights)
+        if outerMostLight is not None:
+            print(outerMostLight)
+
 def getOuterMostSign(i, c):
     outerMostSign = None
 
@@ -160,6 +161,15 @@ def ocrDetect(outerMostSign, result):
     for (bbox, text, prob) in easyOcrReader.readtext(roi):
         print(text)
         return text
+    
+def lowPassFilter(validClassNames, resultHistory, hitPercentage): 
+    filteredSet = set()
+    resultHistoryLength = len(resultHistory)
+    for className in validClassNames:
+        registeredObjectFrames = sum(className in historyFrame for historyFrame in resultHistory)
+        if registeredObjectFrames / resultHistoryLength > hitPercentage:
+            filteredSet.add(className)
+    return filteredSet
 
 # def gasControl():
 #     while True:
@@ -180,7 +190,6 @@ def getProcessData(parentPipe, process):
 
 
 if __name__ == '__main__':
-    pass
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
     esp32Data = {
@@ -218,4 +227,6 @@ if __name__ == '__main__':
         time.sleep(0.01)
 
     while True:
+        # print(lineDetectionData)
+        # print(objectDetectionData.boxes.cls)
         drivingAlgorithm()

@@ -11,7 +11,7 @@ class Detection:
     def run(self, childPipe):
         self.childPipe = childPipe
         # self.cameraList.append(Camera("voor",0,141439,"rftgb"))
-        self.cameraList.append(Camera("links",1,140516,"ujikm"))
+        self.cameraList.append(Camera("links",0,140516,"ujikm"))
         # self.cameraList.append(Camera("rechts",2,140516,"edwsc"))
 
         for camera in self.cameraList:
@@ -115,13 +115,13 @@ class Detection:
             # print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment {camera.name} = {segmentNumber}")
             # print("---------------------------------")
 
-            data ={
-                "camara": camera.name,
-                "lineDetected": line_detected,
-                "segment": segmentNumber
-            }
+        data ={
+            "camera": camera.name,
+            "lineDetected": line_detected,
+            "segment": segmentNumber
+        }
 
-            self.childPipe.send(data)
+        self.childPipe.send(data)
             # if camera.name == "voor":
             #     segmentNumberVoor=self.check_segments4(blackWhiteFrame)
             #     print("\n---------------------------------")
