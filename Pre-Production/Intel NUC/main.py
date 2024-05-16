@@ -82,10 +82,9 @@ def drivingAlgorithm():
         for i,segment in enumerate(cameraLineSegments[1:]): # left/right camera
             if segment == -1:
                 continue 
-            print(i)
             steeringPercentage = segment/20 
             steeringAngle = steeringPercentage * maxSteeringAngle
-        if i == 0: steeringAngle = -steeringAngle # if line on left side: negatieve angle
+            if i == 0: steeringAngle = -steeringAngle # if line on left side: negatieve angle
     print(steeringAngle)
 
     # esp32Data["steeringDegrees"] = steeringAngle
