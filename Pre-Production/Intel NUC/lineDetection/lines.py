@@ -7,11 +7,12 @@ class Detection:
         self.whitePixelSegmentHitThreshold = 416
         self.cameraList=[]
         self.childPipe = None
+        self.amountOfSideSegments = 20
 
     def run(self, childPipe):
         self.childPipe = childPipe
-        # self.cameraList.append(Camera("voor",0,141439,"rftgb"))
-        self.cameraList.append(Camera("links",0,140516,"ujikm"))
+        self.cameraList.append(Camera("voor",0,141439,"rftgb"))
+        # self.cameraList.append(Camera("links",1,140516,"ujikm"))
         # self.cameraList.append(Camera("rechts",2,140516,"edwsc"))
 
         for camera in self.cameraList:
@@ -108,7 +109,7 @@ class Detection:
             if camera.name == "voor":
                 segmentNumber=self.check_segments(blackWhiteFrame, 4)
             else: # camera links/rechts
-                segmentNumber=self.check_segments(blackWhiteFrame, 20)
+                segmentNumber=self.check_segments(blackWhiteFrame, self.amountOfSideSegments)
             # cv.setWindowTitle(camera.name, f"{camera.name}: Lower_white = {camera.lower_white}, White line detected = {line_detected}, In segment {camera.name} = {segmentNumber}")
             cv.setWindowTitle(camera.name, f"{camera.name}: White line detected = {line_detected}, In segment {camera.name} = {segmentNumber}")
             # print("\n---------------------------------")
@@ -117,8 +118,7 @@ class Detection:
 
         data ={
             "camera": camera.name,
-            "lineDetected": line_detected,
-            "segment": segmentNumber
+            "steeringPercentage": segmentNumber / self.amountOfSideSegments
         }
 
         self.childPipe.send(data)

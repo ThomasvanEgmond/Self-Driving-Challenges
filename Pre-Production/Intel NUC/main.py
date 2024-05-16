@@ -1,4 +1,4 @@
-# from ESP import ESP32 
+from ESP import ESP32 
 from YOLO_easyOCR.YOLOv8 import ObjectDetection
 from lineDetection.lines import Detection
 from multiprocessing import Process, Pipe
@@ -7,97 +7,67 @@ import threading
 import os
 import time
 
-defaultSpeed = 10
-desSpeed = 5
-maxSteeringAngle = 90
-
-cameraLineSegments = [-1,-1,-1] # [voor,links,rechts] -1 if no line detected
-
 def drivingAlgorithm():
-    global esp32ParentPipe
-    global esp32Data
-    global lineDetectionData
-    global objectDetectionData
-    global defaultSpeed
-    global speedSignSpeed
-    global motorPWM
-    global newSpeed
-    global currentSpeed
+    parsedData = parseObjectDetectionData()
+    if parsedData["outerMostRedLight"] is not None:
+        print("joeppie")
 
-    global defaultSpeed
-    global desSpeed
-    global maxSteeringAngle
+def parseObjectDetectionData():
+    outerMostRedLight = 0
+    outerMostGreenLight = 0
+    outerMostSign = 0
 
-    global cameraLineSegments
-
-    # print(lineDetectionData)
-    # print(objectDetectionData)
-
-    # esp32Data["brakePWM"] = lineDetectionData["segment"]
-    # esp32ParentPipe.send(esp32Data)
-
-    # outerMostRedLight = None
-    # outerMostSign = None
-    # redLights = []
-
-    # getProcessData(lineDetectionParentPipe, lineDetectionData)
-    # lineDetectedInFront = False
-
-    # Update line segments
-    cameraList = ["voor","links","rechts"]
-    index = cameraList.index(lineDetectionData["camera"])
-    if lineDetectionData["lineDetected"]:
-        cameraLineSegments[index] = lineDetectionData["segment"]
-    else: cameraLineSegments[index] = -1
-    # print(cameraLineSegments)
-
-    # gas/brake logic
-    tempObData = objectDetectionData
     for i, c in enumerate(objectDetectionData.boxes.cls):
+        coords = objectDetectionData.boxes.xyxy[i]
+        maxXCoord = coords[2]
         match objectDetectionData.names[int(c)]:
             case "Red":
-                if getOuterMostRedLight(i, c):
-                    currentSpeed = desSpeed
-                    if (cameraLineSegments[0]!=-1):
-                        # stop()
-                        pass
+                if maxXCoord > outerMostRedLight: outerMostRedLight = maxXCoord
 
             case "Green":
-                if getOuterMostGreenLight(i, c):
-                    if speedSignSpeed is not None:
-                        currentSpeed = speedSignSpeed
-                    else:
-                        currentSpeed = defaultSpeed
-
-            case "Sign":
-                if getOuterMostSign(i, c):
-                    currentSpeed = speedSignSpeed
+                if maxXCoord > outerMostGreenLight: outerMostGreenLight = maxXCoord
             
-            case _:
-                pass
+            case "Sign":   
+                if outerMostSign is None:
+                    outerMostSign = coords
+                if maxXCoord > outerMostSign[2]:         # compare x_max
+                    outerMostSign = coords
+
+
+
+    if outerMostSign is not None:
+        signSpeed = ocrDetect(outerMostSign, objectDetectionData)
+
+    returnData = {
+        "outerMostRedLight": None,
+        "outerMostGreenLight": None,
+        "signSpeed": None
+    }
+
+    if outerMostRedLight: returnData["outerMostRedLight"] = outerMostRedLight
+    if outerMostRedLight: returnData["outerMostGreenLight"] = outerMostGreenLight
+    if outerMostSign: returnData["signSpeed"] = outerMostSign
+
+    return returnData
+
+def steeringLogic(): # run in thread
+    while True:
+        esp32Data["steeringDegrees"] = 90
+
+        if bool(cameraLineSteeringPercentage["links"]) and not bool(cameraLineSteeringPercentage["rechts"]):
+            esp32Data["steeringDegrees"] = cameraLineSteeringPercentage["links"] * (steeringRange / 2) + (steeringRange / 2)
+
+        if not bool(cameraLineSteeringPercentage["links"]) and bool(cameraLineSteeringPercentage["rechts"]):
+            esp32Data["steeringDegrees"] = cameraLineSteeringPercentage["rechts"] * (steeringRange / 2)
+        # print(esp32Data["steeringDegrees"])
+
+
+def sendKartControlData(): # run in thread
+    while True:
+        esp32ParentPipe.send(esp32Data)
+        time.sleep(0.005)
+
     
-    # steering logic
-    steeringAngle = 0
-    if not (cameraLineSegments[1]!=-1 and cameraLineSegments[2]!=-1):
-        for i,segment in enumerate(cameraLineSegments[1:]): # left/right camera
-            if segment == -1:
-                continue 
-            steeringPercentage = segment/20 
-            steeringAngle = steeringPercentage * maxSteeringAngle
-            if i == 0: steeringAngle = -steeringAngle # if line on left side: negatieve angle
-    print(steeringAngle)
-
-    # esp32Data["steeringDegrees"] = steeringAngle
-    # esp32ParentPipe.send(esp32Data)
-    
-
-# def parseJSON():
-#     getProcessData(lineDetectionParentPipe, lineDetectionData)
-#     match lineDetectionData.camera.name:
-#         case "links":
-
-
-
 def getOuterMostRedLight(i, c):
     outerMostRedLight = None
     redLights = []
@@ -174,6 +144,29 @@ def lowPassFilter(validClassNames, resultHistory, hitPercentage):
 #     while True:
 #         while currentSpeed <= newSpeed:
 
+def yoloStart():
+    global easyOcrReader
+    yolov8ParentPipe, yolov8ChildPipe = Pipe()
+    yolov8Process = Process(target=ObjectDetection().detect, args=(yolov8ChildPipe,), daemon=True)
+    yolov8DataThread = threading.Thread(target=getProcessData, args=(yolov8ParentPipe, "yolov8"), daemon=True)
+    easyOcrReader = easyocr.Reader(['en'], gpu=False)
+    yolov8Process.start()
+    yolov8DataThread.start()
+
+def esp32Start():
+    global esp32ParentPipe
+    esp32ParentPipe, esp32ChildPipe = Pipe()
+    esp32Process = Process(target=ESP32().connect, args=(esp32ChildPipe,), daemon=True)
+    esp32Process.start()
+
+def lineDetectionStart():
+    lineDetectionParentPipe, lineDetectionChildPipe = Pipe()
+    lineDetectionProcess = Process(target=Detection().run, args=(lineDetectionChildPipe,), daemon=True)
+    lineDetectionProcess.start()
+    lineDetectionDataThread = threading.Thread(target=getProcessData, args=(lineDetectionParentPipe, "lineDetection"), daemon=True)
+    lineDetectionDataThread.start()
+
+
 def getProcessData(parentPipe, process):
     while True:
         if parentPipe.poll(None):
@@ -191,34 +184,28 @@ def getProcessData(parentPipe, process):
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
+    defaultSpeed = 10
+    desSpeed = 5
+    steeringRange = 180
+    easyOcrReader = None
+    lineDetectionData = None
+    objectDetectionData = None
+
+    cameraLineSteeringPercentage = {
+        "links": 0,
+        "rechts": 0,
+        "voor": 0
+    }
+
     esp32Data = {
         "motorPWM": 0,
         "brakePWM": 0,
-        "steeringDegrees": 90,
-        "state": "driving"
+        "steeringAngle": 90
     }
-
-    lineDetectionData = None
-    objectDetectionData = None
-    desSpeed = 0
-
-    # esp32ParentPipe, esp32ChildPipe = Pipe()
-    # esp32Process = Process(target=ESP32().connect, args=(esp32ChildPipe,), daemon=True)
-    # esp32Process.start()
-
-    yolov8ParentPipe, yolov8ChildPipe = Pipe()
-    yolov8Process = Process(target=ObjectDetection().detect, args=(yolov8ChildPipe,), daemon=True)
-    yolov8Process.start()
-    yolov8DataThread = threading.Thread(target=getProcessData, args=(yolov8ParentPipe, "yolov8"), daemon=True)
-    easyOcrReader = easyocr.Reader(['en'], gpu=False)
-    yolov8DataThread.start()
-
-    lineDetectionParentPipe, lineDetectionChildPipe = Pipe()
-    lineDetectionProcess = Process(target=Detection().run, args=(lineDetectionChildPipe,), daemon=True)
-    lineDetectionProcess.start()
-    lineDetectionDataThread = threading.Thread(target=getProcessData, args=(lineDetectionParentPipe, "lineDetection"), daemon=True)
-    lineDetectionDataThread.start()
     
+    yoloStart()
+    lineDetectionStart()
+
     while lineDetectionData is None:
         time.sleep(0.01)
 
@@ -226,6 +213,4 @@ if __name__ == '__main__':
         time.sleep(0.01)
 
     while True:
-        # print(lineDetectionData)
-        # print(objectDetectionData.boxes.cls)
         drivingAlgorithm()
