@@ -118,7 +118,8 @@ class Detection:
 
         data ={
             "camera": camera.name,
-            "steeringPercentage": segmentNumber / self.amountOfSideSegments
+            "steeringPercentage": segmentNumber / self.amountOfSideSegments,
+            "segment": segmentNumber
         }
 
         self.childPipe.send(data)
