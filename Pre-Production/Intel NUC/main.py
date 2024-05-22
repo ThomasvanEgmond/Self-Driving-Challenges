@@ -12,6 +12,8 @@ def drivingAlgorithm():
     global desSpeed
     global waitingOnGreenLight
     global waitingOnPedestrian
+    global personCrossingDone
+    global personSegmentCount
     parsedData = parseObjectDetectionData()
 
     if waitingOnGreenLight and "Green" in parsedData and not "Red" in parsedData:
@@ -25,7 +27,7 @@ def drivingAlgorithm():
         # waitingOnPedestrian = false 
 
 
-    if not waitingOnPedestrian or not waitingOnGreenLight: desSpeed = signSpeed
+    if not waitingOnGreenLight: desSpeed = signSpeed
     else: return
 
     if "Red" in parsedData:
@@ -36,9 +38,20 @@ def drivingAlgorithm():
 
     if "Person" in parsedData:
         if not waitingOnPedestrian: desSpeed = 5
-        if frontCameraSegment >= 1:
+
+        # stop crossing
+        if waitingOnPedestrian and currentSegment != startSegment and (currentSegment == 0 or currentSegment == personSegmentCount-1) :
+            print("start driving")
+            desSpeed = signSpeed
+            waitingOnPedestrian = False
+            personCrossingDone = True
+
+        # start crossing
+        if frontCameraSegment >= 1 and not waitingOnPedestrian and not personCrossingDone:
             desSpeed = 0
             waitingOnPedestrian = True
+            startSegment = currentSegment
+            print(f"stop driving, startSegment = {startSegment}")
 
             
 
@@ -70,6 +83,8 @@ def parseObjectDetectionData():
     global lastKnownObjectState
     global resultHistory
     global signSpeed
+    global currentPersonSegment
+    global personSegmentCount
 
     outerMostRedLight = 0
     outerMostGreenLight = 0
@@ -99,6 +114,29 @@ def parseObjectDetectionData():
                     outerMostSign = coords
                 if maxXCoord > outerMostSign[2]:         # compare x_max
                     outerMostSign = coords
+            case "Person":
+                objects = tempObjectDetectionData.boxes.cls.tolist()
+                boxes = tempObjectDetectionData.boxes.xyxyn.tolist()
+                personBoxes = [boxes[i] for i in range(len(objects)) if objects[i] == 0]
+                personBox = []
+                if len(personBoxes) == 0: 
+                    if personCrossingDone: # move to outside crosswalkBox
+                        resetCrossing()
+                    break
+                if len(personBoxes) == 1: personBox = personBoxes[0] 
+                if len(personBoxes) > 1: # find largest person box 
+                    largestSize = 0
+                    largestBoxIndex = 0
+                    for i,box in enumerate(personBoxes):
+                        boxSize = (box[2]-box[0])*(box[3]-box[1])
+                        print(f"\tbox {i}: size = {boxSize}")
+                        if boxSize > largestSize: 
+                            largestSize = boxSize
+                            largestBoxIndex = i
+                    print(f"largest box is box {largestBoxIndex}")
+                    personBox = personBoxes[largestBoxIndex]
+                
+                currentPersonSegment = normalToSegment(personSegmentCount,personBox[0]+(personBox[2]-personBox[0])/2)
 
     if outerMostSign is not None:
         signSpeed = ocrDetect(outerMostSign, objectDetectionData)
@@ -131,6 +169,20 @@ def lowPassFilter(validClassNames, resultHistory, hitPercentage):
         if registeredObjectFrames / resultHistoryLength > hitPercentage:
             filteredSet.add(className)
     return filteredSet
+
+def normalToSegment(segmentCount,n):
+    return int(n*segmentCount)
+
+def resetCrossing():
+    global waitingOnPedestrian
+    global personCrossingDone
+    global startSegment
+    global currentSegment
+    waitingOnPedestrian = False # is true while a person is crossing
+    personCrossingDone = False # is true after a person has crossed and resets when no person detected
+    startSegment = -1 # segment where person is first detected
+    currentSegment = -1 # current segment of person during crossing
+    print("crossing reset")
 
 def yoloStart():
     global easyOcrReader
@@ -198,7 +250,6 @@ def gasAndBrakeAlgorithm():
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-    waitingOnPedestrian = False
     waitingOnGreenLight = False
     signSpeed = 10
     curSpeed = 0
@@ -208,6 +259,13 @@ if __name__ == '__main__':
     leftCameraSteeringPercentage = 0
     rightCameraSteeringPercentage = 0
     frontCameraSegment = 0
+
+    waitingOnPedestrian = False # is true while a person is crossing
+    personCrossingDone = False # is true after a person has crossed and resets when no person detected
+    startSegment = -1 # segment where person is first detected
+    currentSegment = -1 # current segment of person during crossing
+    currentPersonSegment = -1
+    personSegmentCount = 4
 
     esp32Data = {
         "motorPWM": 0,
