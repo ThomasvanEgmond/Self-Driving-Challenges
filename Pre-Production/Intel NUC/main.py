@@ -8,50 +8,58 @@ import threading
 import os
 import time
 
-def drivingAlgorithm():
+def drivingAlgorithm(parsedData):
     global desSpeed
     global waitingOnGreenLight
     global waitingOnPedestrian
     global personCrossingDone
     global personSegmentCount
-    parsedData = parseObjectDetectionData()
 
     if waitingOnGreenLight and "Green" in parsedData and not "Red" in parsedData:
+        print("Green light seen, driving")
         desSpeed = signSpeed
         waitingOnGreenLight = False
 
-    if waitingOnPedestrian:
-        pass
-        # startSegment = bla bla 1
-        # if person not in startSegment and is in end segment:
-        # waitingOnPedestrian = false 
-
-
     if not waitingOnGreenLight: desSpeed = signSpeed
-    else: return
+    else: 
+        print("Waiting on green light")
+        return
 
     if "Red" in parsedData:
-        if not waitingOnGreenLight: desSpeed = 5
+        if not waitingOnGreenLight:
+            print("Red light seen, driving slowly") 
+            desSpeed = 5
         if frontCameraSegment >= 2:
+            print("Red light and line seen, stopping")
             desSpeed = 0
             waitingOnGreenLight = True
 
     if "Person" in parsedData:
-        if not waitingOnPedestrian: desSpeed = 5
+        global startSegment
+        if not waitingOnPedestrian:
+            startSegment = lastKnownObjectState["Person"]
+            desSpeed = 5
 
         # stop crossing
-        if waitingOnPedestrian and currentSegment != startSegment and (currentSegment == 0 or currentSegment == personSegmentCount-1) :
-            print("start driving")
+        if waitingOnPedestrian and lastKnownObjectState["Person"] != startSegment and (lastKnownObjectState["Person"] == 1 or lastKnownObjectState["Person"] == personSegmentCount) :
+            print("Person crossed, start driving")
             desSpeed = signSpeed
             waitingOnPedestrian = False
             personCrossingDone = True
 
         # start crossing
-        if frontCameraSegment >= 1 and not waitingOnPedestrian and not personCrossingDone:
-            desSpeed = 0
-            waitingOnPedestrian = True
-            startSegment = currentSegment
-            print(f"stop driving, startSegment = {startSegment}")
+        if not waitingOnPedestrian and not personCrossingDone:
+            if frontCameraSegment:
+                desSpeed = 0
+                waitingOnPedestrian = True
+                startSegment = lastKnownObjectState["Person"]
+                print(f"Person and crosswalk seen, stop driving, startSegment = {startSegment}")
+            else: print("Person but no crosswalk seen")
+
+        if personCrossingDone: print("Person seen but person crossing done, so driving")
+    
+
+    elif waitingOnPedestrian or personCrossingDone: resetCrossing() 
 
             
 
@@ -86,13 +94,10 @@ def parseObjectDetectionData():
     global currentPersonSegment
     global personSegmentCount
 
+    currentPersonSegment = 0
     outerMostRedLight = 0
     outerMostGreenLight = 0
     outerMostSign = 0
-
-    lastKnownObjectState = {}   
-    resultHistory = [] 
-    resultHistorySize = 30
 
     tempObjectDetectionData = objectDetectionData
     detectedClassesSet = set()
@@ -109,7 +114,7 @@ def parseObjectDetectionData():
             case "Green":
                 if maxXCoord > outerMostGreenLight: outerMostGreenLight = maxXCoord
             
-            case "Sign":   
+            case "Sign":
                 if outerMostSign is None:
                     outerMostSign = coords
                 if maxXCoord > outerMostSign[2]:         # compare x_max
@@ -129,34 +134,35 @@ def parseObjectDetectionData():
                     largestBoxIndex = 0
                     for i,box in enumerate(personBoxes):
                         boxSize = (box[2]-box[0])*(box[3]-box[1])
-                        print(f"\tbox {i}: size = {boxSize}")
+                        # print(f"\tbox {i}: size = {boxSize}")
                         if boxSize > largestSize: 
                             largestSize = boxSize
                             largestBoxIndex = i
-                    print(f"largest box is box {largestBoxIndex}")
+                    # print(f"largest box is box {largestBoxIndex}")
                     personBox = personBoxes[largestBoxIndex]
                 
-                currentPersonSegment = normalToSegment(personSegmentCount,personBox[0]+(personBox[2]-personBox[0])/2)
+                currentPersonSegment = normalToSegment(personSegmentCount, personBox[0]+(personBox[2]-personBox[0])/2)
 
-    if outerMostSign is not None:
-        signSpeed = ocrDetect(outerMostSign, objectDetectionData)
+    if outerMostSign != 0: signSpeed = ocrDetect(outerMostSign, objectDetectionData)
 
     if outerMostRedLight: lastKnownObjectState["Red"] = outerMostRedLight
     if outerMostGreenLight: lastKnownObjectState["Green"] = outerMostGreenLight
     if outerMostSign: lastKnownObjectState["Sign"] = outerMostSign
+    if currentPersonSegment: lastKnownObjectState["Person"] = currentPersonSegment
 
     if len(resultHistory) == resultHistorySize:
         resultHistory.pop(resultHistorySize - 1)
     resultHistory.insert(0, detectedClassesSet)
 
     
-    filteredSet = lowPassFilter(tempObjectDetectionData.names.values(), resultHistory, 0.25)
+    filteredSet = lowPassFilter(tempObjectDetectionData.names.values(), resultHistory, 0.5)
 
     # gefilterde lijst met welke objecten we nu detecteren VVV
     # lijst met lastKnownObjectState["Red"] = boxes VVV
 
     returnData = {}
     for object in filteredSet:
+        if object == "Yellow": continue
         returnData[object] = lastKnownObjectState[object]
 
     return returnData
@@ -166,37 +172,42 @@ def lowPassFilter(validClassNames, resultHistory, hitPercentage):
     resultHistoryLength = len(resultHistory)
     for className in validClassNames:
         registeredObjectFrames = sum(className in historyFrame for historyFrame in resultHistory)
+        # if className == "Person": print(f'{registeredObjectFrames} / {resultHistoryLength} = {registeredObjectFrames / resultHistoryLength}')
         if registeredObjectFrames / resultHistoryLength > hitPercentage:
             filteredSet.add(className)
     return filteredSet
 
-def normalToSegment(segmentCount,n):
-    return int(n*segmentCount)
+def normalToSegment(segmentCount, normalizedBoxCenter):
+    return int(normalizedBoxCenter*segmentCount) + 1
 
 def resetCrossing():
     global waitingOnPedestrian
     global personCrossingDone
     global startSegment
-    global currentSegment
+    global lastKnownObjectState
     waitingOnPedestrian = False # is true while a person is crossing
     personCrossingDone = False # is true after a person has crossed and resets when no person detected
     startSegment = -1 # segment where person is first detected
-    currentSegment = -1 # current segment of person during crossing
+    # lastKnownObjectState["Person"] = -1 # current segment of person during crossing
     print("crossing reset")
 
 def yoloStart():
+    global objectDetectionData
     global easyOcrReader
+    objectDetectionData = None
     yolov8ParentPipe, yolov8ChildPipe = Pipe()
     yolov8Process = Process(target=ObjectDetection().detect, args=(yolov8ChildPipe,), daemon=True)
-    yolov8DataThread = threading.Thread(target=getProcessData, args=(yolov8ParentPipe, "yolov8"), daemon=True)
+    yolov8DataThread = threading.Thread(target=getProcessData, args=(yolov8ParentPipe, "yolov8"))
     easyOcrReader = easyocr.Reader(['en'], gpu=False)
     yolov8Process.start()
     yolov8DataThread.start()
+    while objectDetectionData is None:
+        pass
 
 def esp32Start():
     global esp32ParentPipe
     esp32ParentPipe, esp32ChildPipe = Pipe()
-    esp32Process = Process(target=ESP32().connect, args=(esp32ChildPipe,), daemon=True)
+    esp32Process = Process(target=ESP32().connect, args=(esp32ChildPipe,))
     esp32Process.start()\
     
 def revCounterStart():
@@ -206,11 +217,19 @@ def revCounterStart():
     revProcess.start()
 
 def lineDetectionStart():
+    global frontCameraSegment
+    global leftCameraSteeringPercentage
+    global rightCameraSteeringPercentage
+    frontCameraSegment = None
+    leftCameraSteeringPercentage = None
+    rightCameraSteeringPercentage = None
     lineDetectionParentPipe, lineDetectionChildPipe = Pipe()
     lineDetectionProcess = Process(target=Detection().run, args=(lineDetectionChildPipe,), daemon=True)
     lineDetectionProcess.start()
-    lineDetectionDataThread = threading.Thread(target=getProcessData, args=(lineDetectionParentPipe, "lineDetection"), daemon=True)
+    lineDetectionDataThread = threading.Thread(target=getProcessData, args=(lineDetectionParentPipe, "lineDetection"))
     lineDetectionDataThread.start()
+    while frontCameraSegment is None:
+        pass
 
 def getProcessData(parentPipe, process):
     while True:
@@ -229,6 +248,7 @@ def getProcessData(parentPipe, process):
                 case "yolov8":
                     global objectDetectionData
                     objectDetectionData = data
+                    drivingAlgorithm(parseObjectDetectionData())
                 case "revolutions":
                     global revs
                     revs  = data
@@ -250,11 +270,14 @@ def gasAndBrakeAlgorithm():
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
+    lastKnownObjectState = {}
     waitingOnGreenLight = False
     signSpeed = 10
     curSpeed = 0
     desSpeed = 10
     steeringRange = 180
+    resultHistory = [] 
+    resultHistorySize = 60
 
     leftCameraSteeringPercentage = 0
     rightCameraSteeringPercentage = 0
@@ -275,6 +298,3 @@ if __name__ == '__main__':
     
     yoloStart()
     lineDetectionStart()
-
-    while True:
-        drivingAlgorithm()
