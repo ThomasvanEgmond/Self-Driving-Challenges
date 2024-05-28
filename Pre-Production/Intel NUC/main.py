@@ -93,19 +93,21 @@ def parseObjectDetectionData():
     global signSpeed
     global currentPersonSegment
     global personSegmentCount
+    global objectDetectionData
 
     currentPersonSegment = 0
     outerMostRedLight = 0
     outerMostGreenLight = 0
     outerMostSign = 0
+    personBox = [0, 0, 0, 0]
 
-    tempObjectDetectionData = objectDetectionData
     detectedClassesSet = set()
 
-    for i, c in enumerate(tempObjectDetectionData.boxes.cls):
-        className = tempObjectDetectionData.names[int(c)]
+    for i, c in enumerate(objectDetectionData.boxes.cls):
+        className = objectDetectionData.names[int(c)]
         detectedClassesSet.add(className)
-        coords = tempObjectDetectionData.boxes.xyxy[i]
+        coords = objectDetectionData.boxes.xyxy[i].tolist()
+        normalizedCoords = objectDetectionData.boxes.xyxyn[i]
         maxXCoord = coords[2]
         match className:
             case "Red":
@@ -115,47 +117,29 @@ def parseObjectDetectionData():
                 if maxXCoord > outerMostGreenLight: outerMostGreenLight = maxXCoord
             
             case "Sign":
-                if outerMostSign is None:
+                if not outerMostSign:
                     outerMostSign = coords
                 if maxXCoord > outerMostSign[2]:         # compare x_max
                     outerMostSign = coords
             case "Person":
-                objects = tempObjectDetectionData.boxes.cls.tolist()
-                boxes = tempObjectDetectionData.boxes.xyxyn.tolist()
-                personBoxes = [boxes[i] for i in range(len(objects)) if objects[i] == 0]
-                personBox = []
-                if len(personBoxes) == 0: 
-                    if personCrossingDone: # move to outside crosswalkBox
-                        resetCrossing()
-                    break
-                if len(personBoxes) == 1: personBox = personBoxes[0] 
-                if len(personBoxes) > 1: # find largest person box 
-                    largestSize = 0
-                    largestBoxIndex = 0
-                    for i,box in enumerate(personBoxes):
-                        boxSize = (box[2]-box[0])*(box[3]-box[1])
-                        # print(f"\tbox {i}: size = {boxSize}")
-                        if boxSize > largestSize: 
-                            largestSize = boxSize
-                            largestBoxIndex = i
-                    # print(f"largest box is box {largestBoxIndex}")
-                    personBox = personBoxes[largestBoxIndex]
-                
+                if ((personBox[2]-personBox[0])*(personBox[3]-personBox[1]) < (normalizedCoords[2]-normalizedCoords[0])*(normalizedCoords[3]-normalizedCoords[1])):
+                    personBox = normalizedCoords
                 currentPersonSegment = normalToSegment(personSegmentCount, personBox[0]+(personBox[2]-personBox[0])/2)
 
     if outerMostSign != 0: signSpeed = ocrDetect(outerMostSign, objectDetectionData)
-
-    if outerMostRedLight: lastKnownObjectState["Red"] = outerMostRedLight
-    if outerMostGreenLight: lastKnownObjectState["Green"] = outerMostGreenLight
-    if outerMostSign: lastKnownObjectState["Sign"] = outerMostSign
-    if currentPersonSegment: lastKnownObjectState["Person"] = currentPersonSegment
 
     if len(resultHistory) == resultHistorySize:
         resultHistory.pop(resultHistorySize - 1)
     resultHistory.insert(0, detectedClassesSet)
 
     
-    filteredSet = lowPassFilter(tempObjectDetectionData.names.values(), resultHistory, 0.5)
+    filteredSet = lowPassFilter(objectDetectionData.names.values(), resultHistory, 0.5)
+
+    if outerMostRedLight: lastKnownObjectState["Red"] = outerMostRedLight
+    if outerMostGreenLight: lastKnownObjectState["Green"] = outerMostGreenLight
+    if outerMostSign: lastKnownObjectState["Sign"] = outerMostSign
+    if currentPersonSegment: lastKnownObjectState["Person"] = currentPersonSegment
+
 
     # gefilterde lijst met welke objecten we nu detecteren VVV
     # lijst met lastKnownObjectState["Red"] = boxes VVV
@@ -220,9 +204,9 @@ def lineDetectionStart():
     global frontCameraSegment
     global leftCameraSteeringPercentage
     global rightCameraSteeringPercentage
-    frontCameraSegment = None
-    leftCameraSteeringPercentage = None
-    rightCameraSteeringPercentage = None
+    frontCameraSegment = 0
+    leftCameraSteeringPercentage = 0
+    rightCameraSteeringPercentage = 0
     lineDetectionParentPipe, lineDetectionChildPipe = Pipe()
     lineDetectionProcess = Process(target=Detection().run, args=(lineDetectionChildPipe,), daemon=True)
     lineDetectionProcess.start()

@@ -14,14 +14,14 @@ from queue import Queue
 class ObjectDetection:
     def __init__(self,):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
-        self.ov_model = YOLO('final_model/best_openvino_model/', task="detect")
+        self.ov_model = YOLO('train10/best_openvino_model/', task="detect")
         self.childPipe = None
 
     def detect(self, childPipe):
         self.childPipe = childPipe
         # ocrObject = charDetection()
         while True:
-            results = self.ov_model(source="1", show=True, verbose=False, imgsz=640, stream=True)
+            results = self.ov_model(source="0", show=True, verbose=False, imgsz=800, stream=True)
             # queue = Queue(maxsize = 60)
             # for frame in qu
             for result in results:

@@ -11,7 +11,7 @@ class Detection:
 
     def run(self, childPipe):
         self.childPipe = childPipe
-        self.cameraList.append(Camera("voor",0,141439,"rftgb"))
+        self.cameraList.append(Camera("voor",1,141439,"rftgb"))
         # self.cameraList.append(Camera("links",1,140516,"ujikm"))
         # self.cameraList.append(Camera("rechts",2,140516,"edwsc"))
 

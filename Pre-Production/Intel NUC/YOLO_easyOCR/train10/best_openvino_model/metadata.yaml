@@ -1,0 +1,20 @@
+description: Ultralytics best model trained on /content/lights_speed_2-1/data.yaml
+author: Ultralytics
+license: AGPL-3.0 https://ultralytics.com/license
+date: '2024-04-10T14:20:00.020693'
+version: 8.1.14
+stride: 32
+task: detect
+batch: 1
+imgsz:
+- 800
+- 800
+names:
+  0: Green
+  1: Red
+  2: Yellow
+  3: Cycle Crossing
+  4: Speed Limit -10-
+  5: Speed Limit -20-
+  6: Speed limit -15-
+  7: walking
