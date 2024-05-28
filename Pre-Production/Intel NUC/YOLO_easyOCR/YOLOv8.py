@@ -14,7 +14,7 @@ from queue import Queue
 class ObjectDetection:
     def __init__(self,):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
-        self.ov_model = YOLO('train10/best_openvino_model/', task="detect")
+        self.ov_model = YOLO('final_V4/best_openvino_model/', task="detect")
         self.childPipe = None
 
     def detect(self, childPipe):
