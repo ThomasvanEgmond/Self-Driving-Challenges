@@ -15,6 +15,9 @@ def drivingAlgorithm(parsedData):
     global personCrossingDone
     global personSegmentCount
 
+    if not "Red" in parsedData and not "Person" in parsedData: print(f"driving at {desSpeed} km/h")
+
+
     if waitingOnGreenLight and "Green" in parsedData and not "Red" in parsedData:
         print("Green light seen, driving")
         desSpeed = signSpeed
@@ -59,7 +62,7 @@ def drivingAlgorithm(parsedData):
         if personCrossingDone: print("Person seen but person crossing done, so driving")
     
 
-    elif waitingOnPedestrian or personCrossingDone: resetCrossing() 
+    elif waitingOnPedestrian or personCrossingDone: resetCrossing()
 
             
 
@@ -126,7 +129,11 @@ def parseObjectDetectionData():
                     personBox = normalizedCoords
                 currentPersonSegment = normalToSegment(personSegmentCount, personBox[0]+(personBox[2]-personBox[0])/2)
 
-    if outerMostSign != 0: signSpeed = ocrDetect(outerMostSign, objectDetectionData)
+    if outerMostSign != 0:
+        tmpSignSpeed = ocrDetect(outerMostSign, objectDetectionData)
+        if tmpSignSpeed in ["10","15","20"]:
+        #if tmpSignSpeed == "20":
+            signSpeed = tmpSignSpeed
 
     if len(resultHistory) == resultHistorySize:
         resultHistory.pop(resultHistorySize - 1)
