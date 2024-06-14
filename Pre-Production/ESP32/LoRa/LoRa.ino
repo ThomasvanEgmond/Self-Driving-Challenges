@@ -29,10 +29,17 @@ int steeringAngle;
 int motorPWM;
 int brakePWM;
 
+int r2 = 0;
+int l2 = 0;
+int lStickX = 0;
+int lStickY = 0;
+
 void setup(){
     Serial.begin(115200);
-    // PS4.attach(onEvent);
-    // PS4.begin("f0:b6:1e:79:0b:4d");
+    if (LORA_SENDER) {
+      PS4.attach(onEvent);
+      PS4.begin("f0:b6:1e:79:0b:4d");
+    }
     while (!Serial);
 
     if (OLED_RST > 0) {
@@ -87,32 +94,38 @@ void loop(){
         showParsedData();
         newData = false;
     }
-  #if LORA_SENDER
-      // Gebruik deze zend code voor de knop en controller input, data = "tekst, 1, 1.00";
-      // char data[64]
-      if (digitalRead(1)){
-        int data = 112;
-        LoRa.beginPacket();
-        LoRa.print(data);
-        LoRa.endPacket();
-      }
-  #else
-      if (LoRa.parsePacket()) {
-          String recv = "";
-          int i = 0;
-          while (LoRa.available()) {
-            char temp = (char)LoRa.read();
-            recv += temp;
-            receivedChars[i++] = temp;
-          }
-          // receivedChars[i] = '\0';
-          Serial.println(receivedChars);
-          Serial.println(atoi(receivedChars));
-          // strcpy(tempChars, receivedChars);
-          // parseData(false);
-          // showParsedData();
-      }
-  #endif
+  // #if LORA_SENDER
+  //     // Gebruik deze zend code voor de knop en controller input, data = "tekst, 1, 1.00";
+  //     // char data[64]
+  //     // if (digitalRead(1)){
+  //     //   int data = 112;
+  //       String data = String("<" + String(r2) + "," + String(r2) + "," + String(lStickX) + "," + String(lStickY) + ">");
+  //       LoRa.beginPacket();
+  //       LoRa.print(data);
+  //       LoRa.endPacket();
+  //       display.clear();
+  //       // display.drawString(display.getWidth() / 2, display.getHeight() / 2 - 16, String("L2: " + String(l2) + " R2:" + String(r2)));
+  //       display.drawString(display.getWidth() / 2, display.getHeight() / 2, data);
+  //       // display.drawString(display.getWidth() / 2, display.getHeight() / 2 + 16, String("y: " + String(lStickY)));
+  //       display.display();
+  //     // }
+  // #else
+  //     if (LoRa.parsePacket()) {
+  //         String recv = "";
+  //         int i = 0;
+  //         while (LoRa.available()) {
+  //           char temp = (char)LoRa.read();
+  //           recv += temp;
+  //           receivedChars[i++] = temp;
+  //         }
+  //         receivedChars[i] = '\0';
+  //         Serial.println(receivedChars);
+  //         // Serial.println(atoi(receivedChars));
+  //         strcpy(tempChars, receivedChars);
+  //         parseData(false);
+  //         showParsedData();
+  //     }
+  // #endif
 }
 
 void recvWithStartEndMarkers() {
@@ -168,7 +181,20 @@ void parseData(bool fromPC) {      // split the data into its parts
   else{
     strtokIndx = strtok(tempChars,",");      // get the first part - the string
     // Int
-    integerFromLoRa = atoi(strtokIndx);     // convert this part to an integer
+    r2 = atoi(strtokIndx);     // convert this part to an integer
+    // Serial.print(r2);
+
+    // Int
+    strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
+    r2 = atoi(strtokIndx);     // convert this part to an integer
+
+    // Int
+    strtokIndx = strtok(NULL, ",");
+    lStickX = atoi(strtokIndx);     // convert this part to a interger
+
+    // Int
+    strtokIndx = strtok(NULL, ",");
+    lStickY = atoi(strtokIndx);     // convert this part to a interger
   }
 
   // // Int
@@ -188,155 +214,171 @@ void parseData(bool fromPC) {      // split the data into its parts
 
 void showParsedData() {
     display.clear();
-    display.drawString(display.getWidth() / 2, display.getHeight() / 2 - 16, String(motorPWM));
-    display.drawString(display.getWidth() / 2, display.getHeight() / 2, String(brakePWM));
-    display.drawString(display.getWidth() / 2, display.getHeight() / 2 + 16, String(steeringAngle));
+    // Serial.print(r2);
+    String richting = "Voor ";
+    String gas = "Gas los ";
+    String rem = "Rem los ";
+    if (steeringAngle < 90) richting = "Links ";
+    if (steeringAngle > 90) richting = "Rechts ";
+    if (motorPWM > 90) gas = "Gassen ";
+    if (brakePWM > 90) rem = "Remmen ";
+    display.drawString(display.getWidth() / 2, display.getHeight() / 2 - 16, String(gas + String(motorPWM)));
+    display.drawString(display.getWidth() / 2, display.getHeight() / 2, String(rem + String(brakePWM)));
+    display.drawString(display.getWidth() / 2, display.getHeight() / 2 + 16, String(richting + String(steeringAngle)));
     display.display();
 }
 
 void onEvent(){
+  r2 = 0;
+  l2 = 0;
+  lStickX = 0;
+  lStickY = 0;
  
   if(PS4.event.button_up.right){
-    Serial.println("right arrow up");
+    // Serial.println("right arrow up");
   }
  
   if(PS4.event.button_down.right){
-    Serial.println("right arrow down");
+    // Serial.println("right arrow down");
   }
  
   if(PS4.event.button_up.left){
-    Serial.println("left arrow up");
+    // Serial.println("left arrow up");
   }
  
   if(PS4.event.button_down.left){
-    Serial.println("left arrow down");
+    // Serial.println("left arrow down");
   }
  
   if(PS4.event.button_up.down){
-    Serial.println("down arrow up");
+    // Serial.println("down arrow up");
   }
  
   if(PS4.event.button_down.down){
-    Serial.println("down arrow down");
+    // Serial.println("down arrow down");
   }
  
   if(PS4.event.button_up.up){
-    Serial.println("up arrow up");
+    // Serial.println("up arrow up");
   }
  
   if(PS4.event.button_down.up){
-    Serial.println("up arrow down");
+    // Serial.println("up arrow down");
   }
  
   if(PS4.event.button_up.r3){
-    Serial.println("r3 stick up");
+    // Serial.println("r3 stick up");
   }
  
   if(PS4.event.button_down.r3){
-    Serial.println("r3 stick down");
+    // Serial.println("r3 stick down");
   }
  
   if(PS4.event.button_up.l3){
-    Serial.println("l3 stick up");
+    // Serial.println("l3 stick up");
   }
  
   if(PS4.event.button_down.l3){
-    Serial.println("l3 stick down");
+    // Serial.println("l3 stick down");
   }
  
   if(PS4.R2Value()){
-    printf("R2: %d \n", PS4.R2Value());
+    r2 = PS4.R2Value();
+    // printf("R2: %d \n", PS4.R2Value());
   }
  
   if(PS4.L2Value()){
-    printf("L2: %d \n", PS4.L2Value());
+    l2 = PS4.L2Value();
+    // printf("L2: %d \n", PS4.L2Value());
   }
  
   if(PS4.event.button_up.l1){
-    Serial.println("l1 button up");
+    // Serial.println("l1 button up");
   }
  
   if(PS4.event.button_down.l1){
-    Serial.println("l1 button down");
+    // Serial.println("l1 button down");
   }
  
   if(PS4.event.button_up.r1){
-    Serial.println("r1 button up");
+    // Serial.println("r1 button up");
   }
  
   if(PS4.event.button_down.r1){
-    Serial.println("r1 button down");
+    // Serial.println("r1 button down");
   }
  
   if(PS4.event.button_up.touchpad){
-    Serial.println("touchpad button up");
+    // Serial.println("touchpad button up");
   }
  
   if(PS4.event.button_down.touchpad){
-    Serial.println("touchpad button down");
+    // Serial.println("touchpad button down");
   }
  
   if(PS4.event.button_up.options){
-    Serial.println("options button up");
+    // Serial.println("options button up");
   }
  
   if(PS4.event.button_down.options){
-    Serial.println("options button down");
+    // Serial.println("options button down");
   }
  
   if(PS4.event.button_up.share){
-    Serial.println("share button up");
+    // Serial.println("share button up");
   }
  
   if(PS4.event.button_down.share){
-    Serial.println("share button down");
+    // Serial.println("share button down");
   }
  
   if(PS4.event.button_up.ps){
-    Serial.println("ps button up");
+    // Serial.println("ps button up");
   }
  
   if(PS4.event.button_down.ps){
-    Serial.println("ps button down");
+    // Serial.println("ps button down");
   }
  
   if(PS4.event.button_up.triangle){
-    Serial.println("triangle button up");
+    // Serial.println("triangle button up");
   }
  
   if(PS4.event.button_down.triangle){
-    Serial.println("triangle button down");
+    // Serial.println("triangle button down");
   }
  
   if(PS4.event.button_up.circle){
-    Serial.println("circle button up");
+    // Serial.println("circle button up");
   }
  
   if(PS4.event.button_down.circle){
-    Serial.println("circle button down");
+    // Serial.println("circle button down");
   }
  
   if(PS4.event.button_up.square){
-    Serial.println("square button up");
+    // Serial.println("square button up");
   }
  
   if(PS4.event.button_down.square){
-    Serial.println("square button down");
+    // Serial.println("square button down");
   }
  
   if(PS4.event.button_up.cross){
-    Serial.println("cross button up");
+    // Serial.println("cross button up");
   }
  
   if(PS4.event.button_down.cross){
-    Serial.println("cross button down");
+    // Serial.println("cross button down");
   }
 
   if(PS4.LStickX()<-10||PS4.LStickX()>10||PS4.LStickY()<-10||PS4.LStickY()>10){
-    printf("LStick: (%d, %d) \n", PS4.LStickX(), PS4.LStickY());
+    lStickX = PS4.LStickX();
+    lStickY = PS4.LStickY();
+    // printf("LStick: (%d, %d) \n", PS4.LStickX(), PS4.LStickY());
   }
 
   if(PS4.RStickX()<-10||PS4.RStickX()>10||PS4.RStickY()<-10||PS4.RStickY()>10){
-    printf("RStick: (%d, %d) \n", PS4.RStickX(), PS4.RStickY());
+    // printf("RStick: (%d, %d) \n", PS4.RStickX(), PS4.RStickY());
   }
 }

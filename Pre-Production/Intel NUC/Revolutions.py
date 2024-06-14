@@ -2,8 +2,8 @@ class Revolutions:
     def __init__(self):
         self.revs = 0
 
-    def getRevolutions(self, childPipe):
+    def get_revolutions(self, child_pipe):
         # doe dingen
-        self.childPipe.send(self.revs)
+        child_pipe.send(self.revs)
         pass
 

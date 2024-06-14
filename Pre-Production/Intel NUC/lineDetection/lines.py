@@ -3,82 +3,62 @@ import cv2 as cv
 
 class Detection:
     def __init__(self):
-        self.whitePixelHitThreshold = 1664
-        self.whitePixelSegmentHitThreshold = 416
-        self.cameraList=[]
-        self.childPipe = None
-        self.amountOfSideSegments = 20
+        self.white_pixel_detection_threshold = 1664
+        self.camera_list=[]
+        self.child_pipe = None
 
-    def run(self, childPipe):
-        self.childPipe = childPipe
-        self.cameraList.append(Camera("voor",0,141439,"rftgb"))
-        # self.cameraList.append(Camera("links",1,140516,"ujikm"))
-        # self.cameraList.append(Camera("rechts",2,140516,"edwsc"))
+    def run(self, child_pipe):
+        self.child_pipe = child_pipe
+        self.running = True
 
-        for camera in self.cameraList:
+        # for each camera, first manually determine the white_pixel_calibration_value
+        # self.camera_list.append(Camera("voor",1,141439, 4,'t', 'g', 'y', 'h', 'b'))
+        self.camera_list.append(Camera("links",1,140516, 20,'e', 'd', 'r', 'f', 'c'))
+        # self.camera_list.append(Camera("rechts",2,140516, 20,'u', 'j', 'i', 'k', 'm'))
+
+        for camera in self.camera_list:
                 if not camera.cap.isOpened():
                     print("Cannot open camera nr."+ camera.name)
                     exit()   
         
-        while True:
-            for camera in self.cameraList:
+        while self.running:
+            for camera in self.camera_list:
                 self.check_for_lines(camera)
-
-            if not self.checkKeyboardInputs(self.cameraList):
-                break
+                self.handle_keyboard_input(camera)
 
 
-        for camera in self.cameraList:
+        for camera in self.camera_list:
                 camera.cap.release()
 
         cv.destroyAllWindows()
 
-    def black_white_processing(self, frame, lower_white):
+    def black_white_processing(self, frame, grayscale_split_value):
         # Optimize the kernel size if possible or consider processing at a lower resolution
         kernel_size = 5  # Slightly smaller kernel might still serve your purpose
         blur = cv.GaussianBlur(frame, (kernel_size, kernel_size), 0)
-        grayScaleFrame = cv.cvtColor(blur, cv.COLOR_BGR2GRAY)
+        gray_scale_frame = cv.cvtColor(blur, cv.COLOR_BGR2GRAY)
         
-        upper_white = 255
-        blackWhiteFrame = cv.inRange(grayScaleFrame, lower_white, upper_white)  # filters only white
+        black_white_frame = cv.inRange(gray_scale_frame, grayscale_split_value, 255)  # filters only white
 
-        return blackWhiteFrame
+        return black_white_frame
 
-    def calibrateLowerWhite(self, calibrationCountDown, lower_white, base_value, current_value):
-        if current_value<base_value: return lower_white-2**(calibrationCountDown-1)
-        return lower_white+2**(calibrationCountDown-1)
-
-    # def check_segments4(self, blackWhiteFrame):
-    #     height = blackWhiteFrame.shape[0]
-    #     segment_height = height // 4
-    #     for i in reversed(range(4)):
-    #         segment = blackWhiteFrame[i * segment_height:(i + 1) * segment_height, :]
-    #         white_pixels = np.sum(segment) / 255
-    #         if white_pixels > 416:
-    #             return i+1
+    def calibrate_grayscale_split_value(self, remaining_calibration_frame_buffer, grayscale_split_value, white_pixel_calibration_value, current_value):
+        if current_value<white_pixel_calibration_value:
+            return grayscale_split_value-2**(remaining_calibration_frame_buffer-1)
+        return grayscale_split_value+2**(remaining_calibration_frame_buffer-1)
             
-    # def check_segments20(self, blackWhiteFrame):
-    #     height = blackWhiteFrame.shape[0]
-    #     segment_height = height // 20
-    #     for i in reversed(range(20)):
-    #         segment = blackWhiteFrame[i * segment_height:(i + 1) * segment_height, :]
-    #         white_pixels = np.sum(segment) / 255
-    #         if white_pixels > 416:
-    #             return i+1
-            
-    def check_segments(self, blackWhiteFrame, segmentCount):
-        height = blackWhiteFrame.shape[0]
-        segment_height = height // segmentCount
-        for i in reversed(range(segmentCount)):
-            segment = blackWhiteFrame[i * segment_height:(i + 1) * segment_height, :]
-            white_pixels = np.sum(segment) / 255
-            if white_pixels > self.whitePixelSegmentHitThreshold:
-                return i+1
+    def check_segments(self, black_white_frame, amount_of_segments):
+        segment_height = black_white_frame.shape[0] // amount_of_segments
+        for segment_count in reversed(range(amount_of_segments)):
+            segment_frame = black_white_frame[segment_count * segment_height:(segment_count + 1) * segment_height, :]
+            white_pixels = np.sum(segment_frame) / 255
+            if white_pixels > self.white_pixel_detection_threshold / amount_of_segments:
+                return segment_count+1
+        return 0
 
     def check_for_lines(self, camera):
-        line_detected = False
-        ret, frame = camera.cap.read()
-        if not ret:
+        read_correctly, frame = camera.cap.read()
+        if not read_correctly:
             print(f"Can't receive frame (stream end?) from camera {camera.name}. Exiting ...")
             return False  # Indicates that frame reading was unsuccessful
         
@@ -86,118 +66,61 @@ class Detection:
         # height, width = frame.shape[:2]
         # frame[:, 0:width//2] = 0  # Set all pixels on the left side to black
         
-        blackWhiteFrame = self.black_white_processing(frame, camera.lower_white)
+        black_white_frame = self.black_white_processing(frame, camera.grayscale_split_value)
+        
+        cv.imshow(camera.name, black_white_frame)
 
-        # print("new ")
-        # print(blackWhiteFrame)
-        
-        # Note: You may want to apply the black out effect after detecting white spots
-        # depending on whether you need the detection to run on the whole frame or just the visible part.
-        # If after, make sure to adjust the `white_spots` image in a similar way.
-        
-        
-        # cv.imshow('camera',frame)
-        cv.imshow(camera.name, blackWhiteFrame)
+        white_pixel_count = np.sum(black_white_frame) / 255
 
-        white_pixels = np.sum(blackWhiteFrame) / 255
-        # cv.setWindowTitle(camera.name, f"{camera.name}: Lower_white = {camera.lower_white}, White line detected = {line_detected}")
-        cv.setWindowTitle(camera.name, f"{camera.name}: White line detected = {line_detected}")
-        segmentNumberVoor = segmentNumberLinks = segmentNumberRechts = 0
-        segmentNumber = 0
-        if white_pixels > self.whitePixelHitThreshold:
-            line_detected = True
-            if camera.name == "voor":
-                segmentNumber=self.check_segments(blackWhiteFrame, 4)
-            else: # camera links/rechts
-                segmentNumber=self.check_segments(blackWhiteFrame, self.amountOfSideSegments)
-            # cv.setWindowTitle(camera.name, f"{camera.name}: Lower_white = {camera.lower_white}, White line detected = {line_detected}, In segment {camera.name} = {segmentNumber}")
-            cv.setWindowTitle(camera.name, f"{camera.name}: White line detected = {line_detected}, In segment {camera.name} = {segmentNumber}")
-            # print("\n---------------------------------")
-            # print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment {camera.name} = {segmentNumber}")
-            # print("---------------------------------")
+        segment_number = self.check_segments(black_white_frame, camera.amount_of_segments)
+
+        cv.setWindowTitle(camera.name, f"{camera.name}: White line detected = {bool(segment_number)}" + (f", In segment {camera.name} = {segment_number}" if segment_number else ""))
 
         data ={
             "camera": camera.name,
-            "steeringPercentage": segmentNumber / self.amountOfSideSegments,
-            "segment": segmentNumber
+            "steering_percentage": segment_number / camera.amount_of_segments,
+            "segment": segment_number
         }
 
-        self.childPipe.send(data)
-            # if camera.name == "voor":
-            #     segmentNumberVoor=self.check_segments4(blackWhiteFrame)
-            #     print("\n---------------------------------")
-            #     print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment Voor = {segmentNumberVoor}")
-            #     print("---------------------------------")
-            # if camera.name == "links":
-            #     segmentNumberLinks=self.check_segments20(blackWhiteFrame)
-            #     print("\n---------------------------------"
-            #     print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment Links = {segmentNumberLinks}")
-            #     print("---------------------------------")
-            # if camera.name == "rechts":
-            #     segmentNumberRechts=self.check_segments20(blackWhiteFrame)
-            #     print("\n---------------------------------")
-            #     print(f"Camera = {camera.name}\nLower_white = {camera.lower_white}\nWhite pixel = {white_pixels}\nWhite line detected = {line_detected}\nIn segment rechts = {segmentNumberRechts}")
-            #     print("---------------------------------")
-
-        if camera.calibrationCountDown > 0:
-            if camera.base_value-white_pixels<-100 or camera.base_value-white_pixels>100:
-                camera.lower_white=self.calibrateLowerWhite(camera.calibrationCountDown, camera.lower_white, camera.base_value, white_pixels)
-            camera.calibrationCountDown-=1
+        self.child_pipe.send(data)
+   
+        if camera.remaining_calibration_frame_buffer:
+            if camera.white_pixel_calibration_value-white_pixel_count<-100 or camera.white_pixel_calibration_value-white_pixel_count>100:
+                camera.grayscale_split_value=self.calibrate_grayscale_split_value(camera.remaining_calibration_frame_buffer, camera.grayscale_split_value, camera.white_pixel_calibration_value, white_pixel_count)
+            camera.remaining_calibration_frame_buffer-=1
 
 
-    def checkKeyboardInputs(self, cameraList):
-        key = cv.waitKey(1)
-        if key == ord('q'):
-            return False
-        for camera in cameraList:
-            if key == ord(camera.keyboardInputs[0]) and camera.lower_white < 255:
-                camera.lower_white += 1
-            if key == ord(camera.keyboardInputs[1]) and camera.lower_white > 0:
-                camera.lower_white -= 1
-            if key == ord(camera.keyboardInputs[2]) and camera.lower_white < 245:
-                camera.lower_white += 10
-            if key == ord(camera.keyboardInputs[3]) and camera.lower_white > 10:
-                camera.lower_white -= 10
-            if key == ord(camera.keyboardInputs[4]): # camera calibrate
-                camera.calibrationCountDown = 7
-                camera.lower_white=127
-        return True
-
-    # def main(self,):
-    #     cameraList=[]
-    #     cameraList.append(Camera("voor",0,141439,"rftgb"))
-    #     cameraList.append(Camera("links",1,140516,"ujikm"))
-    #     cameraList.append(Camera("rechts",2,140516,"edwsc"))
-
-
-    #     for camera in cameraList:
-    #             if not camera.cap.isOpened():
-    #                 print("Cannot open camera nr."+ camera.name)
-    #                 exit()   
-        
-    #     while True:
-    #         for camera in cameraList:
-    #             self.check_for_lines(camera)
-
-    #         if not self.checkKeyboardInputs(cameraList):
-    #             break
-
-
-    #     for camera in cameraList:
-    #             camera.cap.release()
-
-    #     cv.destroyAllWindows()
-
-    # if __name__ == "__main__":
-    #     main()
+    def handle_keyboard_input(self, camera):
+        pressed_key = cv.waitKey(1)
+        if pressed_key <= 0: return
+        match chr(pressed_key):
+            case camera.keybind_plus_one: camera.grayscale_split_value += 1
+            case camera.keybind_minus_one: camera.grayscale_split_value -= 1
+            case camera.keybind_plus_ten: camera.grayscale_split_value += 10
+            case camera.keybind_minus_ten: camera.grayscale_split_value -= 10
+            case camera.keybind_auto_calibrate:
+                camera.remaining_calibration_frame_buffer = 7
+                camera.grayscale_split_value=127
+            case 'q': self.running = False
+            
+        if camera.grayscale_split_value < 0: camera.grayscale_split_value = 0
+        if camera.grayscale_split_value > 255: camera.grayscale_split_value = 255
 
 class Camera:
-    def __init__(self, name, cap, base_value, keyboardInputs, lower_white=100) -> None:
-        self.name=name
-        self.cap=cv.VideoCapture(cap, cv.CAP_DSHOW)
-        self.base_value=base_value 
-        self.keyboardInputs=keyboardInputs # string of 5 chars for controls
-        self.lower_white=lower_white
-        self.calibrationCountDown=0
+    
+    def __init__(self, camera_name, camera_device, white_pixel_calibration_value, amount_of_segments,
+                 keybind_plus_one, keybind_minus_one, keybind_plus_ten,
+                 keybind_minus_ten, keybind_auto_calibrate, grayscale_split_value=100) -> None:
 
-# Detection().run("kaas")
+        self.name=camera_name
+        self.cap=cv.VideoCapture(camera_device, cv.CAP_DSHOW)
+        self.white_pixel_calibration_value=white_pixel_calibration_value 
+        self.keybind_plus_one = keybind_plus_one,
+        self.keybind_minus_one = keybind_minus_one,
+        self.keybind_plus_ten = keybind_plus_ten,
+        self.keybind_minus_ten = keybind_minus_ten, 
+        self.keybind_auto_calibrate = keybind_auto_calibrate
+        self.amount_of_segments = amount_of_segments
+        self.grayscale_split_value = grayscale_split_value
+        self.remaining_calibration_frame_buffer=0
+

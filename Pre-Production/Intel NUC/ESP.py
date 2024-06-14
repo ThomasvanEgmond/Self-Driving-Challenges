@@ -6,37 +6,23 @@ import time
 class ESP32:
     def __init__(self):
         self.ser = None
-        self.motorPWM = 0
-        self.brakePWM = 0
-        self.steeringDegrees = 0
-        self.childPipe = None
+        self.motor_PWM = 0
+        self.brake_PWM = 0
+        self.steering_degrees = 0
+        self.child_pipe = None
 
-    def getParentData(self,):
+    def get_parent_data(self,):
             while True:
-                if self.childPipe.poll(None):
-                    data = self.childPipe.recv()
-                    self.motorPWM = data["motorPWM"]
-                    self.brakePWM = data["brakePWM"]
-                    self.steeringAngle = data["steeringAngle"]
-                    # self.writeData(f'<{self.motorPWM}, {self.brakePWM}, {self.steeringDegrees}, {self.state}>')
-                    timeInSeconds = round(time.time() - 1682249887 - 31623000, 3)
-                    # print(timeInSeconds)
-                    # self.writeData(f'<{int(timeInSeconds)}, {int(timeInSeconds)- 300}, {timeInSeconds - 300}, moe>')
-                    self.writeData(f'<{self.motorPWM}, {self.brakePWM}, {self.steeringAngle}>')
-
+                if self.child_pipe.poll(None):
+                    data = self.child_pipe.recv()
+                    self.motor_PWM = data["motor_PWM"]
+                    self.brake_PWM = data["brake_PWM"]
+                    self.steering_degrees = data["steering_degrees"]
+                    self.write_Data(f'<{self.motor_PWM}, {self.brake_PWM}, {self.steering_degrees}>')
                     time.sleep(0.005)
 
-                    # print(data)
-                    # match process:
-                    #     case "lineDetection":
-                    #         global lineDetectionData
-                    #         lineDetectionData = data
-                    #     case "yolov8":
-                    #         global objectDetectionData
-                    #         objectDetectionData = data
-
-    def connect(self, childPipe):
-        self.childPipe = childPipe
+    def connect(self, child_pipe):
+        self.child_pipe = child_pipe
         print('Searching for connected ESP32...')
         self.ser = None
         while self.ser is None:
@@ -58,23 +44,23 @@ class ESP32:
         self.ser.flushOutput()
         print('Connected to ' + self.ser.name) 
 
-        parentDataThread = threading.Thread(target=self.getParentData)
-        parentDataThread.start()
-        while True:
-            self.recvFromArduino()
-            # self.serialMonitor()
+        parent_data_thread = threading.Thread(target=self.get_parent_data)
+        parent_data_thread.start()
+        # while True:
+            # self.recv_from_arduino()
+            # self.serial_monitor()
 
-    def writeData(self, data):
+    def write_Data(self, data):
         # ser.write("<Kaas, 1, 1.23456>".encode())
         self.ser.write(data.encode())
 
-    def serialMonitor(self,):
+    def serial_monitor(self,):
             cc=str(self.ser.readline())
             line = cc[2:][:-5]
             if line != "":
                 print(line)
 
-    def recvFromArduino(self,):
+    def recv_from_arduino(self,):
         global startMarker, endMarker
         startMarker = '<'
         endMarker = '>'
@@ -84,9 +70,7 @@ class ESP32:
         
         # wait for the start character
         while self.ser.read().decode() != startMarker:
-            pass
-            # x = self.ser.read().decode()
-            # print(x)
+            time.sleep(0.001)
         
         # save data until the end marker is found
         while serialByte != endMarker:
