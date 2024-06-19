@@ -1,0 +1,8 @@
+Lineare actuator voor remmen | 24V Simpele + en  - | 
+DC motor controller voor aandrijving | Uitzoeken VEVOR BY15WF02-A 48V 34A 2000W | 
+Servo of stepper motor voor sturen | Voltage onbekend |
+
+Transformatoren vanaf 5V ligt bij WTB/AT
+
+Aansturen d.m.v ESP32 gedaan door TI
+WTB/AT leveren test script in C per aan te sturen onderdeel
