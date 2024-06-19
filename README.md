@@ -1,7 +1,7 @@
 # Self Driving Challenge 2024 (SDC2024) | TINPRJ0478
 
-<img src=image.png width="360">
-<img src=image-1.png width="312">
+<img src=https://github.com/ThomasvanEgmond/Self-Driving-Challenges/assets/122525080/db6c1465-9d8f-425b-9c80-bc690afa91f6 width="360">
+<img src=https://github.com/ThomasvanEgmond/Self-Driving-Challenges/assets/122525080/565898b2-9b51-4e34-864f-a222ab80e946 width="312">
 
 Wij zijn Kadirhan Akin (1060024), David Akerboom (1056357), Luuk de Vries Reilingh (1053870) en Thomas van Egmond (1038854) en ons project 7/8 voor het tweede jaar Technische Informatica was de [`Self Driving Challenge 2024`](https://www.selfdrivingchallenge.nl/)!
 
